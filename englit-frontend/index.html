@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENGLIT - Изучение английского</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Экран входа (без изменений) -->
+    <div id="login-screen">
+        <h1>Добро пожаловать в ENGLIT!</h1>
+        <p>Войдите, чтобы начать изучение слов.</p>
+        <button id="loginBtn">Войти через Google</button>
+    </div>
+
+    <!-- Основной контент приложения (скрыт до входа) -->
+    <div id="app-content" style="display: none;">
+        <div id="user-info">
+            <p>Вы вошли как: <span id="userName"></span></p>
+            <button id="logoutBtn">Выйти</button>
+        </div>
+        <hr>
+
+        <!-- НОВЫЙ БЛОК: Админ-панель (будет видна только вам) -->
+        <div id="admin-panel" style="display: none;">
+            <h2>Панель Администратора</h2>
+            <div class="admin-forms">
+                <form id="add-category-form">
+                    <h3>Добавить категорию</h3>
+                    <input type="text" id="category-id" placeholder="ID (например, networking)" required>
+                    <input type="text" id="category-name" placeholder="Название (например, Сети)" required>
+                    <!-- НОВОЕ ПОЛЕ -->
+                    <textarea id="category-desc" placeholder="Описание категории"></textarea>
+                    <!-- КОНЕЦ НОВОГО ПОЛЯ -->
+                    <button type="submit">Добавить категорию</button>
+                </form>
+                <form id="add-word-form">
+                    <h3>Добавить слово</h3>
+                    <input type="text" id="word-en" placeholder="Слово (анг.)" required>
+                    <input type="text" id="word-ru" placeholder="Перевод" required>
+                    <!-- НОВЫЕ ПОЛЯ -->
+                    <input type="text" id="word-transcription" placeholder="Транскрипция">
+                    <textarea id="word-example" placeholder="Пример использования"></textarea>
+                    <input type="text" id="word-audio" placeholder="URL аудиофайла">
+                    <!-- КОНЕЦ НОВЫХ ПОЛЕЙ -->
+                    <select id="word-category-select" required>
+                        <option value="" disabled selected>Выберите категорию...</option>
+                    </select>
+                    <button type="submit">Добавить слово</button>
+                </form>
+            </div>
+            <hr>
+        </div>
+
+        <h2>Словарь</h2>
+        <!-- НОВЫЙ БЛОК: Три колонки для слов -->
+        <div class="dictionary-columns">
+            <div class="word-column">
+                <h3>Новые</h3>
+                <div id="new-words-container" class="words-container"></div>
+            </div>
+            <div class="word-column">
+                <h3>Изучаю</h3>
+                <div id="learning-words-container" class="words-container"></div>
+            </div>
+            <div class="word-column">
+                <h3>Изучено</h3>
+                <div id="learned-words-container" class="words-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипт подключения Firebase (он уже правильный) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmB_8mAwRyMyPuS37hM3jZxM3zwXYThgY",
+            authDomain: "englit-999d9.firebaseapp.com",
+            projectId: "englit-999d9",
+            storageBucket: "englit-999d9.appspot.com",
+            messagingSenderId: "360161037435",
+            appId: "1:360161037435:web:fb4d86261183b7fe0aa6de",
+            measurementId: "G-RSJPH1B9QY"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.doc = doc;
+        window.addDoc = addDoc;
+        window.setDoc = setDoc;
+        window.auth = auth;
+        window.GoogleAuthProvider = GoogleAuthProvider;
+        window.signInWithPopup = signInWithPopup;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+    </script>
+    
+    <script src="script.js" defer></script>
+</body>
+</html>
