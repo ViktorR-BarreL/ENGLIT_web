@@ -10,17 +10,40 @@ const appContent = document.getElementById('app-content');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
-
-// Элементы админ-панели
 const adminPanel = document.getElementById('admin-panel');
 const addCategoryForm = document.getElementById('add-category-form');
 const addWordForm = document.getElementById('add-word-form');
 const categorySelect = document.getElementById('word-category-select');
-
-// Контейнеры для слов
 const newWordsContainer = document.getElementById('new-words-container');
 const learningWordsContainer = document.getElementById('learning-words-container');
 const learnedWordsContainer = document.getElementById('learned-words-container');
+
+// --- Логика синтеза речи (TTS) ---
+let britishVoice = null;
+
+function loadAndSetVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Ищем женский британский голос. "Kate" и "Libby" - частые имена в системах.
+    britishVoice = voices.find(voice => 
+        voice.lang === 'en-GB' && 
+        (voice.name.includes('Female') || voice.name.includes('Kate') || voice.name.includes('Libby'))
+    );
+
+    // Если не нашли женский, ищем любой британский голос
+    if (!britishVoice) {
+        britishVoice = voices.find(voice => voice.lang === 'en-GB');
+    }
+
+    if (britishVoice) {
+        console.log('Выбран британский голос:', britishVoice.name);
+    } else {
+        console.warn('Британский голос не найден. Будет использован голос по умолчанию.');
+    }
+}
+
+window.speechSynthesis.onvoiceschanged = loadAndSetVoice;
+loadAndSetVoice();
 
 // --- Главная функция, которая следит за входом пользователя ---
 onAuthStateChanged(auth, user => {
@@ -28,7 +51,6 @@ onAuthStateChanged(auth, user => {
         appContent.style.display = 'block';
         loginScreen.style.display = 'none';
         userName.textContent = user.displayName;
-
         if (ADMIN_UIDS.includes(user.uid)) {
             adminPanel.style.display = 'block';
             populateCategoryDropdown();
@@ -43,12 +65,16 @@ onAuthStateChanged(auth, user => {
 });
 
 // --- Логика кнопок входа/выхода ---
-loginBtn.addEventListener('click', () => { /* ... код без изменений ... */ });
-logoutBtn.addEventListener('click', () => { /* ... код без изменений ... */ });
+loginBtn.addEventListener('click', () => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch(error => console.error("Ошибка входа:", error));
+});
+
+logoutBtn.addEventListener('click', () => {
+    signOut(auth).catch(error => console.error("Ошибка выхода:", error));
+});
 
 // --- Логика Админ-Панели ---
-
-// 1. Добавление категории
 addCategoryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const categoryId = addCategoryForm['category-id'].value.trim();
@@ -63,7 +89,6 @@ addCategoryForm.addEventListener('submit', async (e) => {
     } catch (error) { console.error("Ошибка добавления категории:", error); }
 });
 
-// 2. Добавление слова (НОВАЯ ВЕРСИЯ с ID = само слово)
 addWordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const wordValue = addWordForm['word-en'].value.trim().toLowerCase();
@@ -77,7 +102,7 @@ addWordForm.addEventListener('submit', async (e) => {
         translation: addWordForm['word-ru'].value,
         transcription: addWordForm['word-transcription'].value,
         example: addWordForm['word-example'].value,
-        audioUrl: addWordForm['word-audio'].value,
+        // Поле audioUrl удалено, так как мы используем TTS
         category: doc(db, "category", addWordForm['word-category-select'].value)
     };
     try {
@@ -88,7 +113,6 @@ addWordForm.addEventListener('submit', async (e) => {
     } catch (error) { console.error("Ошибка добавления слова:", error); }
 });
 
-// 3. Заполнение выпадающего списка категорий
 async function populateCategoryDropdown() {
     try {
         const response = await fetch('http://localhost:3000/categories');
@@ -104,18 +128,15 @@ async function populateCategoryDropdown() {
 }
 
 // --- Основная Логика Приложения ---
-
-// 1. Изменение статуса слова
 async function updateWordStatus(wordId, newStatus) {
     const user = auth.currentUser;
     if (!user) return;
     try {
         await setDoc(doc(db, "users", user.uid, "userWords", wordId), { status: newStatus }, { merge: true });
-        fetchWordsAndStatuses(); // Просто перезагружаем всё, это самый надежный способ
+        fetchWordsAndStatuses();
     } catch (error) { console.error("Ошибка обновления статуса:", error); }
 }
 
-// 2. ФИНАЛЬНАЯ И РАБОЧАЯ ВЕРСИЯ загрузки и отображения слов
 async function fetchWordsAndStatuses() {
     newWordsContainer.innerHTML = '<p>Загрузка...</p>';
     learningWordsContainer.innerHTML = '';
@@ -139,13 +160,11 @@ async function fetchWordsAndStatuses() {
         const categories = await categoriesResponse.json();
         const words = await wordsResponse.json();
 
-        // Создаем справочник категорий
         const categoriesMap = {};
         categories.forEach(cat => {
             categoriesMap[cat.id] = cat.name;
         });
 
-        // Очищаем контейнеры
         newWordsContainer.innerHTML = '';
         learningWordsContainer.innerHTML = '';
         learnedWordsContainer.innerHTML = '';
@@ -155,36 +174,42 @@ async function fetchWordsAndStatuses() {
             return;
         }
 
-        // Проходим по каждому слову и создаем для него карточку
         words.forEach(data => {
             const card = document.createElement('div');
             card.className = 'word-card';
             card.id = 'word-' + data.id;
-
             const categoryName = categoriesMap[data.categoryId] || 'Без категории';
-
             card.innerHTML = `
                 <div class="info">
                     <p><strong>${data.word}</strong> - ${data.translation} <span class="category-tag">${categoryName}</span></p>
                     <span class="details">${data.transcription || ''} — ${data.example || ''}</span>
                 </div>
                 <div class="actions">
-                    <button class="play-btn" ${!data.audioUrl ? 'style="display:none;"' : ''}>&#9658;</button>
+                    <button class="play-btn">&#9658;</button>
                     <div class="status-buttons">
                         <button class="status-btn learn">Изучаю</button>
                         <button class="status-btn learned">Изучено</button>
                     </div>
                 </div>
             `;
-
-            // Добавляем обработчики событий
+            
             card.querySelector('.play-btn').addEventListener('click', () => {
-                if (data.audioUrl) new Audio(data.audioUrl).play();
+                // Останавливаем предыдущее воспроизведение, если оно есть
+                window.speechSynthesis.cancel(); 
+
+                const utterance = new SpeechSynthesisUtterance(data.word);
+                
+                if (britishVoice) {
+                utterance.voice = britishVoice;
+                }
+
+                utterance.lang = 'en-GB'; // Указываем язык как запасной вариант
+                window.speechSynthesis.speak(utterance);
             });
+            
             card.querySelector('.learn').addEventListener('click', () => updateWordStatus(data.id, 'изучаю'));
             card.querySelector('.learned').addEventListener('click', () => updateWordStatus(data.id, 'изучено'));
 
-            // Распределяем карточку по правильной колонке
             if (data.status === 'изучаю') {
                 learningWordsContainer.appendChild(card);
             } else if (data.status === 'изучено') {
