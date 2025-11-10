@@ -1,5 +1,15 @@
-// --- Получаем все инструменты из window ---
+// --- Получаем все инструменты из window (как было изначально) ---
+// Убедитесь, что эти переменные доступны глобально из index.html
 const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = window;
+
+// Также, нам нужны getDoc, updateDoc, increment, которые не всегда экспортируются в window
+// Поэтому я добавлю их как отдельные глобальные переменные, если они не присутствуют,
+// или будем использовать их через window.db, если они там есть.
+// В данном случае, Firebase SDK в index.html делает их доступными.
+const getDoc = window.getDoc;
+const updateDoc = window.updateDoc;
+const increment = window.increment;
+
 
 // --- ВАЖНО: Вставьте сюда ваш UID Администратора ---
 const ADMIN_UIDS = ['tciaSYZZM0UMArvVbOoYvrjWqlB3'];
@@ -9,14 +19,32 @@ const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
-const userName = document.getElementById('userName');
+const userNameSpan = document.getElementById('userName');
 const adminPanel = document.getElementById('admin-panel');
 const addCategoryForm = document.getElementById('add-category-form');
 const addWordForm = document.getElementById('add-word-form');
-const categorySelect = document.getElementById('word-category-select');
+const categorySelect = document.getElementById('word-category-select'); // Для админ-панели
 const newWordsContainer = document.getElementById('new-words-container');
 const learningWordsContainer = document.getElementById('learning-words-container');
 const learnedWordsContainer = document.getElementById('learned-words-container');
+
+// Элементы главной страницы, добавленные ранее
+const userProfileCircle = document.getElementById('userProfileCircle');
+const userInfoPopup = document.getElementById('user-info');
+const selectedCategoryDisplay = document.getElementById('selectedCategoryDisplay');
+const selectCategoryBtn = document.getElementById('selectCategoryBtn');
+const learnNewWordsBtn = document.getElementById('learnNewWordsBtn');
+const repeatWordsBtn = document.getElementById('repeatWordsBtn');
+const dictionaryBtn = document.getElementById('dictionaryBtn');
+const myWordsBtn = document.getElementById('myWordsBtn');
+
+// Элементы модального окна категорий (из предыдущего обновления)
+const categoryModal = document.getElementById('categoryModal');
+const closeButton = categoryModal.querySelector('.close-button');
+const categoryGrid = document.getElementById('categoryGrid');
+
+let currentCategoryId = null; // Переменная для хранения ID выбранной категории
+
 
 // --- Логика синтеза речи (TTS) ---
 let britishVoice = null;
@@ -48,19 +76,30 @@ loadAndSetVoice();
 // --- Главная функция, которая следит за входом пользователя ---
 onAuthStateChanged(auth, user => {
     if (user) {
-        appContent.style.display = 'block';
         loginScreen.style.display = 'none';
-        userName.textContent = user.displayName;
+        appContent.style.display = 'flex'; // Используем flex для главного layout
+        userNameSpan.textContent = user.displayName || user.email; // Обновил здесь
+        
+        // Обновление кружка профиля
+        userProfileCircle.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : '?';
+        if (user.photoURL) {
+            userProfileCircle.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
+        } else {
+            userProfileCircle.innerHTML = `<span>${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</span>`;
+        }
+
         if (ADMIN_UIDS.includes(user.uid)) {
             adminPanel.style.display = 'block';
-            populateCategoryDropdown();
+            populateCategoryDropdown(); // Загрузка категорий для админ-формы
         } else {
             adminPanel.style.display = 'none';
         }
         fetchWordsAndStatuses();
+        loadCategoriesForSelection(); // Загружаем категории для главного экрана при входе
     } else {
+        loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
-        loginScreen.style.display = 'block';
+        userInfoPopup.style.display = 'none'; // Скрыть попап при выходе
     }
 });
 
@@ -68,6 +107,19 @@ onAuthStateChanged(auth, user => {
 loginBtn.addEventListener('click', () => {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch(error => console.error("Ошибка входа:", error));
+});
+
+// Логика для всплывающего окна профиля
+userProfileCircle.addEventListener('click', (event) => {
+    event.stopPropagation(); // Предотвращаем закрытие при клике по кругу
+    userInfoPopup.style.display = userInfoPopup.style.display === 'flex' ? 'none' : 'flex'; // Изменено на flex
+});
+
+// Закрытие всплывающего окна при клике вне его
+document.addEventListener('click', (event) => {
+    if (!userProfileCircle.contains(event.target) && !userInfoPopup.contains(event.target)) {
+        userInfoPopup.style.display = 'none';
+    }
 });
 
 logoutBtn.addEventListener('click', () => {
@@ -82,34 +134,66 @@ addCategoryForm.addEventListener('submit', async (e) => {
     const categoryDesc = addCategoryForm['category-desc'].value.trim();
     if (!categoryId || !categoryName) return;
     try {
-        await setDoc(doc(db, "category", categoryId), { name: categoryName, description: categoryDesc });
+        await setDoc(doc(db, "category", categoryId), { 
+            name: categoryName, 
+            description: categoryDesc,
+            wordCount: 0 // Инициализируем количество слов
+        });
         alert('Категория добавлена!');
         addCategoryForm.reset();
-        populateCategoryDropdown();
+        populateCategoryDropdown(); // Обновить список категорий в форме добавления слова
+        loadCategoriesForSelection(); // Обновить категории в модальном окне
     } catch (error) { console.error("Ошибка добавления категории:", error); }
 });
 
 addWordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const wordValue = addWordForm['word-en'].value.trim().toLowerCase();
+    const categoryId = addWordForm['word-category-select'].value;
+
     if (!wordValue) {
         alert('Пожалуйста, введите английское слово.');
         return;
     }
+    if (!categoryId) {
+        alert('Пожалуйста, выберите категорию для слова.');
+        return;
+    }
+
     const wordDocRef = doc(db, "words", wordValue);
-    const wordData = {
-        word: addWordForm['word-en'].value,
-        translation: addWordForm['word-ru'].value,
-        transcription: addWordForm['word-transcription'].value,
-        example: addWordForm['word-example'].value,
-        // Поле audioUrl удалено, так как мы используем TTS
-        category: doc(db, "category", addWordForm['word-category-select'].value)
-    };
+    
     try {
+        const categoryRef = doc(db, "category", categoryId);
+        const categorySnap = await getDoc(categoryRef);
+
+        if (!categorySnap.exists()) {
+            alert('Выбранная категория не существует.');
+            return;
+        }
+
+        const wordData = {
+            word: addWordForm['word-en'].value,
+            translation: addWordForm['word-ru'].value,
+            transcription: addWordForm['word-transcription'].value,
+            example: addWordForm['word-example'].value,
+            category: {
+                id: categoryId,
+                name: categorySnap.data().name // Сохраняем имя категории
+            },
+            createdAt: new Date()
+        };
+
         await setDoc(wordDocRef, wordData);
+
+        // Увеличиваем счетчик слов в категории
+        await updateDoc(categoryRef, {
+            wordCount: increment(1)
+        });
+
         alert('Слово добавлено!');
         addWordForm.reset();
         fetchWordsAndStatuses();
+        loadCategoriesForSelection(); // Обновить количество слов в категориях модального окна
     } catch (error) { console.error("Ошибка добавления слова:", error); }
 });
 
@@ -126,6 +210,78 @@ async function populateCategoryDropdown() {
         });
     } catch (error) { console.error("Не удалось загрузить категории:", error); }
 }
+
+// --- Функции для работы с категориями (Модальное окно) ---
+
+// Открытие модального окна выбора категорий
+selectCategoryBtn.addEventListener('click', () => {
+    categoryModal.style.display = 'flex'; // Используем flex для центрирования
+    loadCategoriesForSelection();
+});
+
+// Закрытие модального окна при клике на крестик
+closeButton.addEventListener('click', () => {
+    categoryModal.style.display = 'none';
+});
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', (event) => {
+    if (event.target === categoryModal) {
+        categoryModal.style.display = 'none';
+    }
+});
+
+// Функция для получения и отображения категорий в модальном окне
+async function loadCategoriesForSelection() {
+    categoryGrid.innerHTML = ''; // Очищаем сетку перед загрузкой
+    try {
+        const response = await fetch('http://localhost:3000/categories');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const categories = await response.json();
+
+        // Добавляем "Все категории" как первую опцию
+        const allCategoriesCard = document.createElement('div');
+        allCategoriesCard.classList.add('category-card');
+        allCategoriesCard.innerHTML = `
+            <div class="category-info">
+                <p class="category-name">Все категории</p>
+                <p class="category-word-count">Все слова</p>
+            </div>
+        `;
+        allCategoriesCard.addEventListener('click', () => {
+            selectedCategoryDisplay.value = 'Все категории';
+            currentCategoryId = null; // Сбрасываем ID категории для отображения всех слов
+            categoryModal.style.display = 'none';
+            fetchWordsAndStatuses(); // Обновляем список слов после выбора категории
+        });
+        categoryGrid.appendChild(allCategoriesCard);
+
+
+        categories.forEach(category => {
+            const categoryCard = document.createElement('div');
+            categoryCard.classList.add('category-card');
+            categoryCard.innerHTML = `
+                <div class="category-info">
+                    <p class="category-name">${category.name}</p>
+                    <p class="category-word-count">Количество слов: ${category.wordCount || 0}</p>
+                </div>
+            `;
+            categoryCard.addEventListener('click', () => {
+                selectedCategoryDisplay.value = category.name;
+                currentCategoryId = category.id;
+                categoryModal.style.display = 'none';
+                fetchWordsAndStatuses(); // Обновляем список слов после выбора категории
+            });
+            categoryGrid.appendChild(categoryCard);
+        });
+    } catch (error) {
+        console.error("Ошибка при загрузке категорий для выбора:", error);
+        categoryGrid.innerHTML = '<p>Не удалось загрузить категории.</p>';
+    }
+}
+
 
 // --- Основная Логика Приложения ---
 async function updateWordStatus(wordId, newStatus) {
@@ -169,12 +325,16 @@ async function fetchWordsAndStatuses() {
         learningWordsContainer.innerHTML = '';
         learnedWordsContainer.innerHTML = '';
 
-        if (words.length === 0) {
-            newWordsContainer.innerHTML = '<p>Слов в словаре пока нет.</p>';
+        const filteredWords = currentCategoryId
+            ? words.filter(word => word.categoryId === currentCategoryId)
+            : words;
+
+        if (filteredWords.length === 0) {
+            newWordsContainer.innerHTML = '<p>Слов в выбранной категории пока нет.</p>';
             return;
         }
 
-        words.forEach(data => {
+        filteredWords.forEach(data => {
             const card = document.createElement('div');
             card.className = 'word-card';
             card.id = 'word-' + data.id;
@@ -194,16 +354,12 @@ async function fetchWordsAndStatuses() {
             `;
             
             card.querySelector('.play-btn').addEventListener('click', () => {
-                // Останавливаем предыдущее воспроизведение, если оно есть
                 window.speechSynthesis.cancel(); 
-
                 const utterance = new SpeechSynthesisUtterance(data.word);
-                
                 if (britishVoice) {
-                utterance.voice = britishVoice;
+                    utterance.voice = britishVoice;
                 }
-
-                utterance.lang = 'en-GB'; // Указываем язык как запасной вариант
+                utterance.lang = 'en-GB';
                 window.speechSynthesis.speak(utterance);
             });
             
@@ -223,3 +379,22 @@ async function fetchWordsAndStatuses() {
         newWordsContainer.innerHTML = '<p>Не удалось загрузить слова.</p>';
     }
 }
+
+// --- Заглушки для кнопок главной страницы ---
+selectedCategoryDisplay.value = "Все категории";
+
+learnNewWordsBtn.addEventListener('click', () => {
+    alert('Перейти к изучению новых слов');
+});
+
+repeatWordsBtn.addEventListener('click', () => {
+    alert('Перейти к повторению слов');
+});
+
+dictionaryBtn.addEventListener('click', () => {
+    alert('Перейти в общий словарь');
+});
+
+myWordsBtn.addEventListener('click', () => {
+    alert('Перейти к своим словам');
+});

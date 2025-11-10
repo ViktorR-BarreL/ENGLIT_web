@@ -16,13 +16,61 @@
 
     <!-- Основной контент приложения (скрыт до входа) -->
     <div id="app-content" style="display: none;">
-        <div id="user-info">
-            <p>Вы вошли как: <span id="userName"></span></p>
-            <button id="logoutBtn">Выйти</button>
-        </div>
-        <hr>
+        <!-- НОВЫЙ БЛОК: Главное окно по макету -->
+        <div class="main-layout">
+            <header class="app-header">
+                <h1 class="app-title">ENGLIT</h1>
+                <div class="user-profile-circle" id="userProfileCircle">
+                    <!-- Здесь будет аватар или иконка пользователя -->
+                </div>
+                <!-- user-info перемещен сюда для отображения в круге при необходимости -->
+                <div id="user-info" style="display: none;">
+                    <p>Вы вошли как: <span id="userName"></span></p>
+                    <button id="logoutBtn">Выйти</button>
+                </div>
+            </header>
 
-        <!-- НОВЫЙ БЛОК: Админ-панель (будет видна только вам) -->
+            <div class="main-content-area">
+                <div class="left-panel">
+                    <div class="category-selection">
+                        <input type="text" id="selectedCategoryDisplay" placeholder="Категория слов" readonly>
+                        <button id="selectCategoryBtn">выбрать категорию</button>
+                    </div>
+
+                    <div class="main-buttons-grid">
+                        <button class="action-button" id="learnNewWordsBtn">Изучить новые слова</button>
+                        <button class="action-button" id="repeatWordsBtn">Повторение слов</button>
+                        <button class="action-button" id="dictionaryBtn">Словарь</button>
+                        <button class="action-button" id="myWordsBtn">Свои слова</button>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <h3 class="statistics-title">Статистика</h3>
+                    <div class="statistics-content">
+                        <!-- Здесь будет отображаться статистика -->
+                        <p>Изучено: 0</p>
+                        <p>На изучении: 0</p>
+                        <p>Повторений сегодня: 0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- НОВЫЙ БЛОК: Модальное окно выбора категорий -->
+        <div id="categoryModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Выбор категории слов</h2>
+                    <span class="close-button">&times;</span>
+                </div>
+                <div id="categoryGrid" class="category-grid">
+                    <!-- Категории будут загружены сюда из JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Админ-панель и Словарь пока скрыты -->
         <div id="admin-panel" style="display: none;">
             <h2>Панель Администратора</h2>
             <div class="admin-forms">
@@ -30,20 +78,16 @@
                     <h3>Добавить категорию</h3>
                     <input type="text" id="category-id" placeholder="ID (например, networking)" required>
                     <input type="text" id="category-name" placeholder="Название (например, Сети)" required>
-                    <!-- НОВОЕ ПОЛЕ -->
                     <textarea id="category-desc" placeholder="Описание категории"></textarea>
-                    <!-- КОНЕЦ НОВОГО ПОЛЯ -->
                     <button type="submit">Добавить категорию</button>
                 </form>
                 <form id="add-word-form">
                     <h3>Добавить слово</h3>
                     <input type="text" id="word-en" placeholder="Слово (анг.)" required>
                     <input type="text" id="word-ru" placeholder="Перевод" required>
-                    <!-- НОВЫЕ ПОЛЯ -->
                     <input type="text" id="word-transcription" placeholder="Транскрипция">
                     <textarea id="word-example" placeholder="Пример использования"></textarea>
                     <input type="text" id="word-audio" placeholder="URL аудиофайла">
-                    <!-- КОНЕЦ НОВЫХ ПОЛЕЙ -->
                     <select id="word-category-select" required>
                         <option value="" disabled selected>Выберите категорию...</option>
                     </select>
@@ -53,9 +97,8 @@
             <hr>
         </div>
 
-        <h2>Словарь</h2>
-        <!-- НОВЫЙ БЛОК: Три колонки для слов -->
-        <div class="dictionary-columns">
+        <div class="dictionary-columns" style="display: none;">
+            <h2>Словарь</h2>
             <div class="word-column">
                 <h3>Новые</h3>
                 <div id="new-words-container" class="words-container"></div>
