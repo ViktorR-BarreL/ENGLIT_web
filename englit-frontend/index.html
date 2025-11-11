@@ -17,7 +17,7 @@
     <!-- Основной контент приложения (скрыт до входа) -->
     <div id="app-content" style="display: none;">
         <!-- НОВЫЙ БЛОК: Главное окно по макету -->
-        <div class="main-layout">
+        <div class="main-layout" id="mainLayout">
             <header class="app-header">
                 <h1 class="app-title">ENGLIT</h1>
                 <div class="user-profile-circle" id="userProfileCircle">
@@ -70,6 +70,30 @@
             </div>
         </div>
 
+        <!-- НОВАЯ СТРАНИЦА: Страница изучения слов -->
+        <div id="learning-page" class="learning-page-container" style="display: none;">
+            <div class="learning-header">
+                <button id="backToMainBtn" class="back-button">&larr; Назад</button>
+                <div class="progress-bar-container">
+                    <div id="learningProgressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+            <div class="word-display-area">
+                <button id="prevWordBtn" class="nav-arrow">&lt;</button>
+                <div class="word-card-learning">
+                    <div id="wordDisplay" class="word-text-large"></div>
+                    <div id="translationDisplay" class="word-translation"></div>
+                    <div id="transcriptionDisplay" class="word-transcription"></div>
+                    <div id="exampleDisplay" class="word-example"></div>
+                    <div class="learning-actions">
+                        <button id="knowWordBtn" class="learning-action-button know-it">Знаю слово</button>
+                        <button id="learnItBtn" class="learning-action-button learn-it">Учить</button>
+                    </div>
+                </div>
+                <button id="nextWordBtn" class="nav-arrow">&gt;</button>
+            </div>
+        </div>
+
         <!-- Админ-панель и Словарь пока скрыты -->
         <div id="admin-panel" style="display: none;">
             <h2>Панель Администратора</h2>
@@ -117,7 +141,7 @@
     <!-- Скрипт подключения Firebase (он уже правильный) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -139,6 +163,9 @@
         window.doc = doc;
         window.addDoc = addDoc;
         window.setDoc = setDoc;
+        window.getDoc = getDoc; // Добавлено
+        window.updateDoc = updateDoc; // Добавлено
+        window.increment = increment; // Добавлено
         window.auth = auth;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;

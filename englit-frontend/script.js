@@ -1,14 +1,6 @@
 // --- Получаем все инструменты из window (как было изначально) ---
 // Убедитесь, что эти переменные доступны глобально из index.html
-const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = window;
-
-// Также, нам нужны getDoc, updateDoc, increment, которые не всегда экспортируются в window
-// Поэтому я добавлю их как отдельные глобальные переменные, если они не присутствуют,
-// или будем использовать их через window.db, если они там есть.
-// В данном случае, Firebase SDK в index.html делает их доступными.
-const getDoc = window.getDoc;
-const updateDoc = window.updateDoc;
-const increment = window.increment;
+const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getDoc, updateDoc, increment } = window;
 
 
 // --- ВАЖНО: Вставьте сюда ваш UID Администратора ---
@@ -37,14 +29,30 @@ const learnNewWordsBtn = document.getElementById('learnNewWordsBtn');
 const repeatWordsBtn = document.getElementById('repeatWordsBtn');
 const dictionaryBtn = document.getElementById('dictionaryBtn');
 const myWordsBtn = document.getElementById('myWordsBtn');
+const mainLayout = document.getElementById('mainLayout'); // Главный контейнер
 
 // Элементы модального окна категорий (из предыдущего обновления)
 const categoryModal = document.getElementById('categoryModal');
 const closeButton = categoryModal.querySelector('.close-button');
 const categoryGrid = document.getElementById('categoryGrid');
 
-let currentCategoryId = null; // Переменная для хранения ID выбранной категории
+// Элементы новой страницы изучения слов
+const learningPage = document.getElementById('learning-page');
+const backToMainBtn = document.getElementById('backToMainBtn');
+const learningProgressBar = document.getElementById('learningProgressBar');
+const wordDisplay = document.getElementById('wordDisplay');
+const translationDisplay = document.getElementById('translationDisplay');
+const transcriptionDisplay = document.getElementById('transcriptionDisplay');
+const exampleDisplay = document.getElementById('exampleDisplay');
+const prevWordBtn = document.getElementById('prevWordBtn');
+const nextWordBtn = document.getElementById('nextWordBtn');
+const knowWordBtn = document.getElementById('knowWordBtn');
+const learnItBtn = document.getElementById('learnItBtn');
 
+
+let currentCategoryId = null; // Переменная для хранения ID выбранной категории
+let currentLearningWords = []; // Массив слов для изучения
+let currentWordIndex = 0; // Текущий индекс слова в массиве
 
 // --- Логика синтеза речи (TTS) ---
 let britishVoice = null;
@@ -78,6 +86,8 @@ onAuthStateChanged(auth, user => {
     if (user) {
         loginScreen.style.display = 'none';
         appContent.style.display = 'flex'; // Используем flex для главного layout
+        mainLayout.style.display = 'flex'; // Показываем основной макет
+        learningPage.style.display = 'none'; // Скрываем страницу изучения по умолчанию
         userNameSpan.textContent = user.displayName || user.email; // Обновил здесь
         
         // Обновление кружка профиля
@@ -283,13 +293,18 @@ async function loadCategoriesForSelection() {
 }
 
 
-// --- Основная Логика Приложения ---
+// --- Основная Логика Приложения (для главной страницы) ---
 async function updateWordStatus(wordId, newStatus) {
     const user = auth.currentUser;
     if (!user) return;
     try {
         await setDoc(doc(db, "users", user.uid, "userWords", wordId), { status: newStatus }, { merge: true });
-        fetchWordsAndStatuses();
+        // Для страницы изучения, также обновим статус в текущем массиве слов
+        const wordToUpdate = currentLearningWords.find(word => word.id === wordId);
+        if (wordToUpdate) {
+            wordToUpdate.status = newStatus;
+        }
+        fetchWordsAndStatuses(); // Обновим отображение на главной странице
     } catch (error) { console.error("Ошибка обновления статуса:", error); }
 }
 
@@ -328,6 +343,13 @@ async function fetchWordsAndStatuses() {
         const filteredWords = currentCategoryId
             ? words.filter(word => word.categoryId === currentCategoryId)
             : words;
+
+        // Отфильтровываем слова, которые ещё не "изучаю" или "изучено"
+        currentLearningWords = filteredWords.filter(word => 
+            word.status !== 'изучаю' && word.status !== 'изучено'
+        );
+        currentWordIndex = 0; // Сброс индекса при новой загрузке слов
+
 
         if (filteredWords.length === 0) {
             newWordsContainer.innerHTML = '<p>Слов в выбранной категории пока нет.</p>';
@@ -380,12 +402,112 @@ async function fetchWordsAndStatuses() {
     }
 }
 
+// --- Логика страницы изучения слов ---
+
+function showLearningPage() {
+    mainLayout.style.display = 'none';
+    learningPage.style.display = 'flex';
+    displayCurrentWord();
+}
+
+function hideLearningPage() {
+    learningPage.style.display = 'none';
+    mainLayout.style.display = 'flex';
+    fetchWordsAndStatuses(); // Обновим данные на главной странице после выхода со страницы изучения
+}
+
+function displayCurrentWord() {
+    if (currentLearningWords.length === 0) {
+        wordDisplay.textContent = 'Нет новых слов для изучения в этой категории.';
+        translationDisplay.textContent = '';
+        transcriptionDisplay.textContent = '';
+        exampleDisplay.textContent = '';
+        knowWordBtn.style.display = 'none';
+        learnItBtn.style.display = 'none';
+        prevWordBtn.style.display = 'none';
+        nextWordBtn.style.display = 'none';
+        learningProgressBar.style.width = '100%'; // Прогресс 100% если нет слов
+        return;
+    }
+
+    knowWordBtn.style.display = 'inline-block';
+    learnItBtn.style.display = 'inline-block';
+    prevWordBtn.style.display = 'flex';
+    nextWordBtn.style.display = 'flex';
+
+    const word = currentLearningWords[currentWordIndex];
+    wordDisplay.textContent = word.word;
+    translationDisplay.textContent = word.translation;
+    transcriptionDisplay.textContent = word.transcription || '';
+    exampleDisplay.textContent = word.example || '';
+
+    // Обновляем прогресс-бар
+    const progress = ((currentWordIndex + 1) / currentLearningWords.length) * 100;
+    learningProgressBar.style.width = `${progress}%`;
+
+    // Воспроизводим слово
+    window.speechSynthesis.cancel(); 
+    const utterance = new SpeechSynthesisUtterance(word.word);
+    if (britishVoice) {
+        utterance.voice = britishVoice;
+    }
+    utterance.lang = 'en-GB';
+    window.speechSynthesis.speak(utterance);
+}
+
+function showNextWord() {
+    currentWordIndex++;
+    if (currentWordIndex >= currentLearningWords.length) {
+        alert('Вы изучили все слова в этой категории!');
+        hideLearningPage();
+        return;
+    }
+    displayCurrentWord();
+}
+
+function showPrevWord() {
+    currentWordIndex--;
+    if (currentWordIndex < 0) {
+        currentWordIndex = 0; // Или можно сделать alert('Это первое слово')
+    }
+    displayCurrentWord();
+}
+
+// Обработчики событий для кнопок на странице изучения
+learnNewWordsBtn.addEventListener('click', showLearningPage);
+backToMainBtn.addEventListener('click', hideLearningPage);
+prevWordBtn.addEventListener('click', showPrevWord);
+nextWordBtn.addEventListener('click', showNextWord);
+
+knowWordBtn.addEventListener('click', async () => {
+    if (currentLearningWords.length > 0) {
+        const word = currentLearningWords[currentWordIndex];
+        await updateWordStatus(word.id, 'изучено');
+        // Удаляем слово из текущего списка, чтобы оно больше не появлялось в сессии
+        currentLearningWords.splice(currentWordIndex, 1);
+        if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
+            currentWordIndex = currentLearningWords.length - 1; // Переходим к последнему слову, если удалили текущее и оно было последним
+        }
+        displayCurrentWord(); // Показываем следующее или обновляем текущее
+    }
+});
+
+learnItBtn.addEventListener('click', async () => {
+    if (currentLearningWords.length > 0) {
+        const word = currentLearningWords[currentWordIndex];
+        await updateWordStatus(word.id, 'изучаю');
+        // Удаляем слово из текущего списка
+        currentLearningWords.splice(currentWordIndex, 1);
+        if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
+            currentWordIndex = currentLearningWords.length - 1;
+        }
+        displayCurrentWord();
+    }
+});
+
+
 // --- Заглушки для кнопок главной страницы ---
 selectedCategoryDisplay.value = "Все категории";
-
-learnNewWordsBtn.addEventListener('click', () => {
-    alert('Перейти к изучению новых слов');
-});
 
 repeatWordsBtn.addEventListener('click', () => {
     alert('Перейти к повторению слов');
