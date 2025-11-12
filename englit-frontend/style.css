@@ -1,4 +1,3 @@
-/* Используем переменные для легкого управления цветами */
 :root {
     --background-color: #f8fafc;
     --text-color: #1f2937;
@@ -40,6 +39,23 @@
     --nav-arrow-hover-bg: #cbd5e1;
     --progress-bar-bg: #e5e7eb;
     --progress-bar-fill-color: #10b981;
+
+    /* Новые переменные для страницы повторения */
+    --repeat-page-bg: #f8fafc;
+    --repeat-card-bg: #ffffff;
+    --repeat-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --repeat-text-color-primary: #1f2937;
+    --repeat-text-color-secondary: #6b7280;
+    --repeat-button-primary-bg: #007bff;
+    --repeat-button-primary-hover-bg: #0056b3;
+    --repeat-button-secondary-bg: #6c757d;
+    --repeat-button-secondary-hover-bg: #5a6268;
+    --option-button-bg: #e9ecef;
+    --option-button-hover-bg: #dee2e6;
+    --option-button-correct-bg: #28a745;
+    --option-button-incorrect-bg: #dc3545;
+    --feedback-correct-color: #28a745;
+    --feedback-incorrect-color: #dc3545;
 }
 
 body {
@@ -747,6 +763,282 @@ h1, h2, h3 {
     transform: scale(1.05);
 }
 
+/* --- Стили для страницы повторения слов (repeat-page) --- */
+.repeat-page-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--repeat-page-bg);
+    padding: 20px;
+    box-sizing: border-box;
+    align-items: center;
+}
+
+.repeat-header {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 15px; /* Отступ между элементами хедера */
+}
+
+.test-format-select {
+    padding: 8px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    font-size: 1em;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.repeat-progress {
+    margin-left: 0; /* Сбрасываем margin-left для этого контейнера */
+}
+
+.repeat-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    width: 100%;
+    max-width: 800px;
+}
+
+.word-card-repeat {
+    background-color: var(--repeat-card-bg);
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: var(--repeat-card-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-height: 350px;
+    justify-content: center;
+    gap: 20px;
+    flex-grow: 1;
+    width: 100%; /* Занимает всю доступную ширину в рамках max-width repeat-content */
+}
+
+.repeat-word-text {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: var(--repeat-text-color-primary);
+    margin-bottom: 20px;
+}
+
+.test-options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 400px; /* Ограничение ширины для вариантов ответов */
+}
+
+.test-option-button {
+    background-color: var(--option-button-bg);
+    color: var(--text-color);
+    border: 1px solid #ccc;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    text-align: left;
+}
+
+.test-option-button:hover:not([disabled]) {
+    background-color: var(--option-button-hover-bg);
+}
+
+.test-option-button.correct {
+    background-color: var(--option-button-correct-bg);
+    color: white;
+    border-color: var(--option-button-correct-bg);
+}
+
+.test-option-button.incorrect {
+    background-color: var(--option-button-incorrect-bg);
+    color: white;
+    border-color: var(--option-button-incorrect-bg);
+}
+
+.test-input-field {
+    width: calc(100% - 20px); /* Учитываем padding */
+    padding: 12px 10px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    font-size: 1.1em;
+    color: var(--text-color);
+    background-color: var(--card-background);
+}
+
+.test-translation-display {
+    font-size: 1.8em;
+    color: var(--repeat-text-color-primary);
+    margin-top: 10px;
+}
+
+.placeholder-text {
+    color: var(--subtle-text);
+    font-size: 1.2em;
+}
+
+.feedback-message {
+    margin-top: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    min-height: 1.5em; /* Чтобы не прыгал контент */
+}
+.feedback-message.correct {
+    color: var(--feedback-correct-color);
+}
+.feedback-message.incorrect {
+    color: var(--feedback-incorrect-color);
+}
+
+
+.repeat-actions {
+    display: flex;
+    gap: 20px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.repeat-action-button {
+    padding: 12px 25px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-radius: 8px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.repeat-action-button.primary {
+    background-color: var(--repeat-button-primary-bg);
+}
+.repeat-action-button.primary:hover {
+    background-color: var(--repeat-button-primary-hover-bg);
+}
+
+.repeat-action-button.secondary {
+    background-color: var(--repeat-button-secondary-bg);
+}
+.repeat-action-button.secondary:hover {
+    background-color: var(--repeat-button-secondary-hover-bg);
+}
+
+.test-results-container {
+    background-color: var(--card-background);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--repeat-card-shadow);
+    text-align: center;
+    margin-top: 30px;
+    max-width: 500px;
+    width: 100%;
+}
+
+.test-results-container h3 {
+    margin-top: 0;
+    color: var(--text-color);
+}
+
+.test-results-container p {
+    font-size: 1.2em;
+    margin: 10px 0;
+    color: var(--text-color);
+}
+
+/* --- Стили для страницы словаря (dictionary-page) --- */
+.dictionary-page-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--background-color);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.dictionary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--main-layout-border-color);
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.dictionary-title {
+    margin: 0;
+    flex-grow: 1; /* Позволяет заголовку занимать пространство */
+    text-align: left;
+}
+
+.dictionary-search {
+    padding: 8px 15px;
+    border-radius: 6px;
+    border: 1px solid var(--input-border-color);
+    font-size: 1em;
+    min-width: 250px;
+}
+
+.dictionary-columns-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    flex-grow: 1;
+    overflow: hidden; /* Предотвращает overflow на уровне контейнера */
+}
+
+.dict-column {
+    background-color: var(--main-layout-bg);
+    border: 1px solid var(--main-layout-border-color);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Предотвращает overflow на уровне колонки */
+}
+
+.dict-column h3 {
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--main-layout-border-color);
+    color: var(--subtle-text);
+    flex-shrink: 0;
+}
+
+.dict-words-container {
+    flex-grow: 1;
+    overflow-y: auto; /* Включает прокрутку для слов */
+    padding: 0 10px 10px 0; /* Отступ для скроллбара */
+    min-height: 0; /* Важно для flex-grow в Chrome/Firefox */
+}
+
+/* Уменьшенные карточки для словаря */
+.dict-words-container .word-card {
+    padding: 15px;
+    margin-bottom: 10px;
+}
+.dict-words-container .word-card .info p {
+    font-size: 1.1em;
+}
+.dict-words-container .word-card .info .details {
+    font-size: 0.9em;
+}
+
 
 /* Медиа-запросы для адаптивности */
 @media (max-width: 992px) {
@@ -763,7 +1055,7 @@ h1, h2, h3 {
         padding: 30px;
         max-width: none;
     }
-    .learning-header {
+    .learning-header, .repeat-header {
         flex-direction: column;
         gap: 15px;
     }
@@ -792,9 +1084,27 @@ h1, h2, h3 {
     .word-example {
         font-size: 1em;
     }
+    .repeat-word-text {
+        font-size: 2em;
+    }
+    .test-options-container {
+        max-width: 300px;
+    }
+    .test-option-button, .test-input-field {
+        font-size: 1em;
+    }
+    .dictionary-columns-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
+    body {
+        min-height: unset; /* Позволяем body быть гибким */
+    }
+    #app-content {
+        min-height: unset; /* Позволяем app-content быть гибким */
+    }
     .main-content-area {
         flex-direction: column;
     }
@@ -833,12 +1143,13 @@ h1, h2, h3 {
     .category-card .category-word-count {
         font-size: 1em;
     }
-    .learning-page-container {
+    .learning-page-container, .repeat-page-container, .dictionary-page-container {
         padding: 10px;
+        min-height: unset; /* Убираем min-height для мобильных */
     }
-    .word-card-learning {
+    .word-card-learning, .word-card-repeat {
         padding: 25px;
-        min-height: 300px;
+        min-height: 250px; /* Уменьшаем минимальную высоту */
     }
     .word-text-large {
         font-size: 2em;
@@ -865,5 +1176,31 @@ h1, h2, h3 {
         width: 35px;
         height: 35px;
         font-size: 1.2em;
+    }
+    .repeat-word-text {
+        font-size: 1.8em;
+    }
+    .repeat-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .repeat-action-button {
+        width: 100%;
+        font-size: 1em;
+        padding: 10px 15px;
+    }
+    .test-format-select {
+        width: 100%;
+    }
+    .dictionary-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .dictionary-columns-container {
+        grid-template-columns: 1fr;
+        overflow: visible;
+    }
+    .dict-column {
+        min-height: 300px; /* Минимальная высота колонки на мобильных */
     }
 }

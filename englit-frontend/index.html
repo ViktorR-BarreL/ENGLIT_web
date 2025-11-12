@@ -94,6 +94,68 @@
             </div>
         </div>
 
+        <!-- НОВАЯ СТРАНИЦА: Страница повторения слов (тестирование) -->
+        <div id="repeat-page" class="repeat-page-container" style="display: none;">
+            <div class="repeat-header">
+                <button id="backToMainFromRepeatBtn" class="back-button">&larr; Назад</button>
+                <select id="testFormatSelect" class="test-format-select">
+                    <option value="view">Просмотр перевода</option>
+                    <option value="multiple-choice">Множественный выбор</option>
+                    <option value="text-input">Ввод ответа</option>
+                </select>
+                <div class="progress-bar-container repeat-progress">
+                    <div id="repeatProgressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="repeat-content">
+                <div class="word-card-repeat">
+                    <div id="repeatWordDisplay" class="repeat-word-text">Слово</div>
+                    <div id="testOptionsContainer" class="test-options-container">
+                        <!-- Здесь будут варианты тестирования или поле ввода -->
+                        <p class="placeholder-text">Нажмите "Начать тест", чтобы начать.</p>
+                    </div>
+                    <div id="feedbackMessage" class="feedback-message"></div>
+                </div>
+            </div>
+            <div class="repeat-actions">
+                <button id="startTestBtn" class="repeat-action-button primary">Начать тест</button>
+                <button id="checkAnswerBtn" class="repeat-action-button primary" style="display: none;">Проверить</button>
+                <button id="nextQuestionBtn" class="repeat-action-button secondary" style="display: none;">Далее</button>
+                <button id="finishTestBtn" class="repeat-action-button primary" style="display: none;">Завершить тест</button>
+            </div>
+            
+            <div id="testResultsContainer" class="test-results-container" style="display: none;">
+                <h3>Результаты теста:</h3>
+                <p>Правильных ответов: <span id="correctAnswersCount">0</span></p>
+                <p>Неправильных ответов: <span id="incorrectAnswersCount">0</span></p>
+                <button id="restartTestBtn" class="repeat-action-button primary">Начать заново</button>
+            </div>
+        </div>
+
+        <!-- НОВАЯ СТРАНИЦА: Страница словаря -->
+        <div id="dictionary-page" class="dictionary-page-container" style="display: none;">
+            <div class="dictionary-header">
+                <button id="backToMainFromDictBtn" class="back-button">&larr; Назад</button>
+                <h2 class="dictionary-title">Словарь</h2>
+                <input type="text" id="dictionarySearchInput" class="dictionary-search" placeholder="Поиск слова...">
+            </div>
+            <div class="dictionary-columns-container">
+                <div class="dict-column">
+                    <h3>Исходный словарь</h3>
+                    <div id="source-words-container" class="words-container dict-words-container"></div>
+                </div>
+                <div class="dict-column">
+                    <h3>Изученные слова</h3>
+                    <div id="learned-words-container-dict" class="words-container dict-words-container"></div>
+                </div>
+                <div class="dict-column">
+                    <h3>Добавленные слова</h3>
+                    <div id="added-words-container-dict" class="words-container dict-words-container"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Админ-панель и Словарь пока скрыты -->
         <div id="admin-panel" style="display: none;">
             <h2>Панель Администратора</h2>
