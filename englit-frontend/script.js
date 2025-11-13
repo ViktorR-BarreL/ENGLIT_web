@@ -1,6 +1,6 @@
 // --- Получаем все инструменты из window (как было изначально) ---
 // Убедитесь, что эти переменные доступны глобально из index.html
-const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getDoc, updateDoc, increment } = window;
+const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getDoc, updateDoc, increment, getDocs, serverTimestamp, query, orderBy } = window;
 
 
 // --- ВАЖНО: Вставьте сюда ваш UID Администратора ---
@@ -10,8 +10,6 @@ const ADMIN_UIDS = ['tciaSYZZM0UMArvVbOoYvrjWqlB3'];
 const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userNameSpan = document.getElementById('userName');
 const adminPanel = document.getElementById('admin-panel');
 const addCategoryForm = document.getElementById('add-category-form');
 const addWordForm = document.getElementById('add-word-form');
@@ -22,7 +20,6 @@ const learnedWordsContainer = document.getElementById('learned-words-container')
 
 // Элементы главной страницы, добавленные ранее
 const userProfileCircle = document.getElementById('userProfileCircle');
-const userInfoPopup = document.getElementById('user-info');
 const selectedCategoryDisplay = document.getElementById('selectedCategoryDisplay');
 const selectCategoryBtn = document.getElementById('selectCategoryBtn');
 const learnNewWordsBtn = document.getElementById('learnNewWordsBtn');
@@ -74,6 +71,21 @@ const sourceWordsContainer = document.getElementById('source-words-container');
 const learnedWordsContainerDict = document.getElementById('learned-words-container-dict');
 const addedWordsContainerDict = document.getElementById('added-words-container-dict');
 
+// Элементы новой страницы "Свои слова"
+const myWordsPage = document.getElementById('my-words-page');
+const backToMainFromMyWordsBtn = document.getElementById('backToMainFromMyWordsBtn');
+const addCustomWordForm = document.getElementById('add-custom-word-form');
+const customWordsList = document.getElementById('custom-words-list');
+
+// Элементы новой страницы Личного кабинета
+const profilePage = document.getElementById('profile-page');
+const backToMainFromProfileBtn = document.getElementById('backToMainFromProfileBtn');
+const profileAvatarDisplay = document.getElementById('profile-avatar-display');
+const profileDisplayName = document.getElementById('profile-displayName');
+const profileEmail = document.getElementById('profile-email');
+const soundToggle = document.getElementById('sound-toggle');
+const saveProfileSettingsBtn = document.getElementById('saveProfileSettingsBtn');
+const logoutBtn = document.getElementById('logoutBtn'); // Теперь это кнопка в ЛК
 
 let currentCategoryId = null; // Переменная для хранения ID выбранной категории
 let currentLearningWords = []; // Массив слов для изучения
@@ -84,6 +96,8 @@ let currentRepeatIndex = 0; // Текущий индекс слова в тес�
 let correctAnswers = 0;
 let incorrectAnswers = 0;
 let testActive = false; // Флаг активности теста
+
+let isSoundEnabled = true; // Глобальная переменная для настроек звука
 
 
 // --- Логика синтеза речи (TTS) ---
@@ -110,6 +124,20 @@ function loadAndSetVoice() {
     }
 }
 
+// Функция для воспроизведения речи с учетом настроек
+function speakWord(word) {
+    if (!isSoundEnabled) return; // Проверяем, включен ли звук
+    
+    window.speechSynthesis.cancel(); 
+    const utterance = new SpeechSynthesisUtterance(word);
+    if (britishVoice) {
+        utterance.voice = britishVoice;
+    }
+    utterance.lang = 'en-GB';
+    window.speechSynthesis.speak(utterance);
+}
+
+
 window.speechSynthesis.onvoiceschanged = loadAndSetVoice;
 loadAndSetVoice();
 
@@ -119,11 +147,13 @@ onAuthStateChanged(auth, user => {
         loginScreen.style.display = 'none';
         appContent.style.display = 'flex'; // Используем flex для главного layout
         mainLayout.style.display = 'flex'; // Показываем основной макет
-        learningPage.style.display = 'none'; // Скрываем страницу изучения по умолчанию
-        repeatPage.style.display = 'none'; // Скрываем страницу повторения по умолчанию
-        dictionaryPage.style.display = 'none'; // Скрываем страницу словаря по умолчанию
-        userNameSpan.textContent = user.displayName || user.email; // Обновил здесь
-        
+        // Скрываем все страницы по умолчанию
+        learningPage.style.display = 'none';
+        repeatPage.style.display = 'none';
+        dictionaryPage.style.display = 'none';
+        myWordsPage.style.display = 'none';
+        profilePage.style.display = 'none';
+
         // Обновление кружка профиля
         userProfileCircle.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : '?';
         if (user.photoURL) {
@@ -138,12 +168,13 @@ onAuthStateChanged(auth, user => {
         } else {
             adminPanel.style.display = 'none';
         }
+        
+        loadUserSettings(user); // Загружаем настройки пользователя
         fetchWordsAndStatuses();
         loadCategoriesForSelection(); // Загружаем категории для главного экрана при входе
     } else {
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
-        userInfoPopup.style.display = 'none'; // Скрыть попап при выходе
     }
 });
 
@@ -153,22 +184,10 @@ loginBtn.addEventListener('click', () => {
     signInWithPopup(auth, provider).catch(error => console.error("Ошибка входа:", error));
 });
 
-// Логика для всплывающего окна профиля
-userProfileCircle.addEventListener('click', (event) => {
-    event.stopPropagation(); // Предотвращаем закрытие при клике по кругу
-    userInfoPopup.style.display = userInfoPopup.style.display === 'flex' ? 'none' : 'flex'; // Изменено на flex
-});
-
-// Закрытие всплывающего окна при клике вне его
-document.addEventListener('click', (event) => {
-    if (!userProfileCircle.contains(event.target) && !userInfoPopup.contains(event.target)) {
-        userInfoPopup.style.display = 'none';
-    }
-});
-
 logoutBtn.addEventListener('click', () => {
     signOut(auth).catch(error => console.error("Ошибка выхода:", error));
 });
+
 
 // --- Логика Админ-Панели ---
 addCategoryForm.addEventListener('submit', async (e) => {
@@ -409,15 +428,7 @@ async function fetchWordsAndStatuses() {
                 </div>
             `;
             
-            card.querySelector('.play-btn').addEventListener('click', () => {
-                window.speechSynthesis.cancel(); 
-                const utterance = new SpeechSynthesisUtterance(data.word);
-                if (britishVoice) {
-                    utterance.voice = britishVoice;
-                }
-                utterance.lang = 'en-GB';
-                window.speechSynthesis.speak(utterance);
-            });
+            card.querySelector('.play-btn').addEventListener('click', () => speakWord(data.word));
             
             card.querySelector('.learn').addEventListener('click', () => updateWordStatus(data.id, 'изучаю'));
             card.querySelector('.learned').addEventListener('click', () => updateWordStatus(data.id, 'изучено'));
@@ -442,6 +453,8 @@ function showLearningPage() {
     mainLayout.style.display = 'none';
     repeatPage.style.display = 'none';
     dictionaryPage.style.display = 'none';
+    myWordsPage.style.display = 'none';
+    profilePage.style.display = 'none';
     learningPage.style.display = 'flex';
     displayCurrentWord();
 }
@@ -482,13 +495,7 @@ function displayCurrentWord() {
     learningProgressBar.style.width = `${progress}%`;
 
     // Воспроизводим слово
-    window.speechSynthesis.cancel(); 
-    const utterance = new SpeechSynthesisUtterance(word.word);
-    if (britishVoice) {
-        utterance.voice = britishVoice;
-    }
-    utterance.lang = 'en-GB';
-    window.speechSynthesis.speak(utterance);
+    speakWord(word.word);
 }
 
 function showNextWord() {
@@ -548,6 +555,8 @@ async function showRepeatPage() {
     mainLayout.style.display = 'none';
     learningPage.style.display = 'none'; 
     dictionaryPage.style.display = 'none';
+    myWordsPage.style.display = 'none';
+    profilePage.style.display = 'none';
     repeatPage.style.display = 'flex';
     
     // Сброс состояния теста
@@ -669,13 +678,7 @@ function displayViewFormat(word) {
         finishTestBtn.style.display = 'inline-block';
     }
     // Воспроизводим слово
-    window.speechSynthesis.cancel(); 
-    const utterance = new SpeechSynthesisUtterance(word.word);
-    if (britishVoice) {
-        utterance.voice = britishVoice;
-    }
-    utterance.lang = 'en-GB';
-    window.speechSynthesis.speak(utterance);
+    speakWord(word.word);
 }
 
 async function displayMultipleChoiceFormat(word) {
@@ -693,13 +696,7 @@ async function displayMultipleChoiceFormat(word) {
         testOptionsContainer.appendChild(button);
     });
     // Воспроизводим слово
-    window.speechSynthesis.cancel(); 
-    const utterance = new SpeechSynthesisUtterance(word.word);
-    if (britishVoice) {
-        utterance.voice = britishVoice;
-    }
-    utterance.lang = 'en-GB';
-    window.speechSynthesis.speak(utterance);
+    speakWord(word.word);
 }
 
 function displayTextInputFormat(word) {
@@ -709,13 +706,7 @@ function displayTextInputFormat(word) {
     nextQuestionBtn.style.display = 'none';
     document.getElementById('textAnswerInput').focus();
     // Воспроизводим слово
-    window.speechSynthesis.cancel(); 
-    const utterance = new SpeechSynthesisUtterance(word.word);
-    if (britishVoice) {
-        utterance.voice = britishVoice;
-    }
-    utterance.lang = 'en-GB';
-    window.speechSynthesis.speak(utterance);
+    speakWord(word.word);
 }
 
 async function generateMultipleChoiceOptions(correctWord) {
@@ -852,6 +843,8 @@ async function showDictionaryPage() {
     mainLayout.style.display = 'none';
     learningPage.style.display = 'none';
     repeatPage.style.display = 'none';
+    myWordsPage.style.display = 'none';
+    profilePage.style.display = 'none';
     dictionaryPage.style.display = 'flex';
     dictionarySearchInput.value = ''; // Сбрасываем поиск
     await populateDictionary();
@@ -864,39 +857,44 @@ function hideDictionaryPage() {
 
 async function populateDictionary() {
     sourceWordsContainer.innerHTML = '<p>Загрузка...</p>';
-    learnedWordsContainerDict.innerHTML = '';
-    addedWordsContainerDict.innerHTML = '';
+    learnedWordsContainerDict.innerHTML = '<p>Загрузка...</p>';
+    addedWordsContainerDict.innerHTML = '<p>Загрузка...</p>';
 
     const user = auth.currentUser;
     if (!user) return;
 
     try {
+        // Загрузка всех слов и статусов
         const idToken = await user.getIdToken();
         const response = await fetch('http://localhost:3000/my-words', {
             headers: { 'Authorization': `Bearer ${idToken}` }
         });
 
-        if (!response.ok) {
-            throw new Error('Ошибка сети при загрузке словаря.');
-        }
-
-        const words = await response.json();
+        if (!response.ok) throw new Error('Ошибка сети при загрузке словаря.');
+        const allWords = await response.json();
         
         sourceWordsContainer.innerHTML = '';
         learnedWordsContainerDict.innerHTML = '';
-        addedWordsContainerDict.innerHTML = '';
         
-        words.forEach(wordData => {
-            // Создаем карточку для исходного словаря
+        allWords.forEach(wordData => {
             sourceWordsContainer.appendChild(createDictionaryWordCard(wordData));
-
-            // Распределяем по другим колонкам в зависимости от статуса
             if (wordData.status === 'изучено') {
                 learnedWordsContainerDict.appendChild(createDictionaryWordCard(wordData));
-            } else if (wordData.status === 'изучаю') {
-                addedWordsContainerDict.appendChild(createDictionaryWordCard(wordData));
             }
         });
+
+        // Загрузка слов, добавленных пользователем
+        const customWordsCol = collection(db, "users", user.uid, "customWords");
+        const customWordsSnapshot = await getDocs(query(customWordsCol, orderBy("createdAt", "desc")));
+        
+        addedWordsContainerDict.innerHTML = '';
+        if (customWordsSnapshot.empty) {
+            addedWordsContainerDict.innerHTML = '<p>Вы еще не добавляли свои слова.</p>';
+        } else {
+            customWordsSnapshot.forEach(doc => {
+                addedWordsContainerDict.appendChild(createDictionaryWordCard(doc.data()));
+            });
+        }
 
     } catch (error) {
         console.error("Ошибка при заполнении словаря:", error);
@@ -918,11 +916,7 @@ function createDictionaryWordCard(data) {
     `;
     card.querySelector('.play-btn').addEventListener('click', (e) => {
         e.stopPropagation(); // Предотвращаем другие клики
-        window.speechSynthesis.cancel(); 
-        const utterance = new SpeechSynthesisUtterance(data.word);
-        if (britishVoice) utterance.voice = britishVoice;
-        utterance.lang = 'en-GB';
-        window.speechSynthesis.speak(utterance);
+        speakWord(data.word);
     });
     return card;
 }
@@ -947,9 +941,148 @@ backToMainFromDictBtn.addEventListener('click', hideDictionaryPage);
 dictionarySearchInput.addEventListener('input', filterDictionary);
 
 
-// --- Заглушки для кнопок главной страницы ---
-selectedCategoryDisplay.value = "Все категории";
+// --- Логика страницы "Свои слова" ---
 
-myWordsBtn.addEventListener('click', () => {
-    alert('Перейти к своим словам');
+function showMyWordsPage() {
+    mainLayout.style.display = 'none';
+    learningPage.style.display = 'none';
+    repeatPage.style.display = 'none';
+    dictionaryPage.style.display = 'none';
+    profilePage.style.display = 'none';
+    myWordsPage.style.display = 'flex';
+    loadCustomWords();
+}
+
+function hideMyWordsPage() {
+    myWordsPage.style.display = 'none';
+    mainLayout.style.display = 'flex';
+}
+
+async function loadCustomWords() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    customWordsList.innerHTML = '<p>Загрузка...</p>';
+    
+    const customWordsCol = collection(db, "users", user.uid, "customWords");
+    const q = query(customWordsCol, orderBy("createdAt", "desc"));
+    
+    try {
+        const querySnapshot = await getDocs(q);
+        customWordsList.innerHTML = '';
+        if (querySnapshot.empty) {
+            customWordsList.innerHTML = '<p>Вы еще не добавляли свои слова.</p>';
+        } else {
+            querySnapshot.forEach((doc) => {
+                const wordData = doc.data();
+                const card = createDictionaryWordCard(wordData); // Используем ту же функцию создания карточки
+                customWordsList.appendChild(card);
+            });
+        }
+    } catch (error) {
+        console.error("Ошибка загрузки пользовательских слов:", error);
+        customWordsList.innerHTML = '<p>Не удалось загрузить слова.</p>';
+    }
+}
+
+addCustomWordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const wordEn = addCustomWordForm['word-en-custom'].value.trim();
+    const wordRu = addCustomWordForm['word-ru-custom'].value.trim();
+    const user = auth.currentUser;
+
+    if (!wordEn || !wordRu || !user) {
+        alert('Пожалуйста, заполните оба поля и убедитесь, что вы вошли в систему.');
+        return;
+    }
+
+    try {
+        // Добавляем новое слово в подколлекцию пользователя
+        const customWordsCol = collection(db, "users", user.uid, "customWords");
+        await addDoc(customWordsCol, {
+            word: wordEn,
+            translation: wordRu,
+            createdAt: serverTimestamp() // Используем серверное время для сортировки
+        });
+        
+        addCustomWordForm.reset(); // Очищаем форму
+        await loadCustomWords(); // Перезагружаем список слов
+
+    } catch (error) {
+        console.error("Ошибка добавления своего слова:", error);
+        alert('Не удалось добавить слово. Попробуйте снова.');
+    }
 });
+
+
+// Обработчики событий для "Свои слова"
+myWordsBtn.addEventListener('click', showMyWordsPage);
+backToMainFromMyWordsBtn.addEventListener('click', hideMyWordsPage);
+
+
+// --- Логика страницы Личного кабинета ---
+function showProfilePage() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    mainLayout.style.display = 'none';
+    learningPage.style.display = 'none';
+    repeatPage.style.display = 'none';
+    dictionaryPage.style.display = 'none';
+    myWordsPage.style.display = 'none';
+    profilePage.style.display = 'flex';
+
+    // Заполняем данные
+    profileDisplayName.textContent = user.displayName || 'Не указано';
+    profileEmail.textContent = user.email;
+    
+    if (user.photoURL) {
+        profileAvatarDisplay.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
+    } else {
+        profileAvatarDisplay.innerHTML = `<span>${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</span>`;
+    }
+    
+    soundToggle.checked = isSoundEnabled;
+}
+
+function hideProfilePage() {
+    profilePage.style.display = 'none';
+    mainLayout.style.display = 'flex';
+}
+
+async function loadUserSettings(user) {
+    if (!user) return;
+    const userDocRef = doc(db, "users", user.uid);
+    try {
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists() && userDoc.data().settings) {
+            isSoundEnabled = userDoc.data().settings.soundEnabled;
+        } else {
+            // Если настроек нет, устанавливаем по умолчанию и сохраняем
+            isSoundEnabled = true;
+            await setDoc(userDocRef, { settings: { soundEnabled: true } }, { merge: true });
+        }
+    } catch (error) {
+        console.error("Ошибка загрузки настроек:", error);
+        isSoundEnabled = true; // Возвращаемся к значению по умолчанию при ошибке
+    }
+}
+
+async function saveUserSettings() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    isSoundEnabled = soundToggle.checked;
+    const userDocRef = doc(db, "users", user.uid);
+    try {
+        await setDoc(userDocRef, { settings: { soundEnabled: isSoundEnabled } }, { merge: true });
+        alert('Настройки сохранены!');
+    } catch (error) {
+        console.error("Ошибка сохранения настроек:", error);
+        alert('Не удалось сохранить настройки.');
+    }
+}
+
+userProfileCircle.addEventListener('click', showProfilePage);
+backToMainFromProfileBtn.addEventListener('click', hideProfilePage);
+saveProfileSettingsBtn.addEventListener('click', saveUserSettings);

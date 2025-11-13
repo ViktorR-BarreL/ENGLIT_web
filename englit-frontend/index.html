@@ -23,11 +23,6 @@
                 <div class="user-profile-circle" id="userProfileCircle">
                     <!-- Здесь будет аватар или иконка пользователя -->
                 </div>
-                <!-- user-info перемещен сюда для отображения в круге при необходимости -->
-                <div id="user-info" style="display: none;">
-                    <p>Вы вошли как: <span id="userName"></span></p>
-                    <button id="logoutBtn">Выйти</button>
-                </div>
             </header>
 
             <div class="main-content-area">
@@ -155,6 +150,65 @@
                 </div>
             </div>
         </div>
+        
+        <!-- НОВАЯ СТРАНИЦА: Страница "Свои слова" -->
+        <div id="my-words-page" class="my-words-page-container" style="display: none;">
+            <div class="my-words-header">
+                <button id="backToMainFromMyWordsBtn" class="back-button">&larr; Назад</button>
+                <h2 class="my-words-title">Мои слова</h2>
+            </div>
+            <div class="my-words-content">
+                <div class="add-custom-word-panel">
+                    <h3>Добавить новое слово</h3>
+                    <form id="add-custom-word-form" class="custom-word-form">
+                        <input type="text" id="word-en-custom" placeholder="Слово на английском" required>
+                        <input type="text" id="word-ru-custom" placeholder="Перевод на русский" required>
+                        <button type="submit">Добавить</button>
+                    </form>
+                </div>
+                <div class="custom-words-list-panel">
+                    <h3>Список добавленных слов</h3>
+                    <div id="custom-words-list" class="words-container custom-words-container">
+                        <!-- Сюда будут добавляться карточки слов -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- НОВАЯ СТРАНИЦА: Страница Личного кабинета -->
+        <div id="profile-page" class="profile-page-container" style="display: none;">
+            <div class="profile-header">
+                <button id="backToMainFromProfileBtn" class="back-button">&larr; Назад</button>
+                <h2 class="profile-title">Личный кабинет</h2>
+            </div>
+            <div class="profile-content">
+                <div class="profile-avatar-section">
+                    <div id="profile-avatar-display" class="profile-avatar-display"></div>
+                </div>
+                <div class="profile-details-section">
+                    <div class="profile-data-panel">
+                        <h3>Данные пользователя</h3>
+                        <p><strong>Имя:</strong> <span id="profile-displayName"></span></p>
+                        <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                    </div>
+                    <div class="profile-settings-panel">
+                        <h3>Настройки ЛК</h3>
+                        <div class="setting-item">
+                            <label for="sound-toggle">Озвучка слов</label>
+                            <label class="switch">
+                                <input type="checkbox" id="sound-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="saveProfileSettingsBtn" class="profile-action-button save">Сохранить изменения</button>
+                        <button id="logoutBtn" class="profile-action-button logout">Выйти из аккаунта</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Админ-панель и Словарь пока скрыты -->
         <div id="admin-panel" style="display: none;">
@@ -203,7 +257,7 @@
     <!-- Скрипт подключения Firebase (он уже правильный) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, increment, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -225,9 +279,13 @@
         window.doc = doc;
         window.addDoc = addDoc;
         window.setDoc = setDoc;
-        window.getDoc = getDoc; // Добавлено
-        window.updateDoc = updateDoc; // Добавлено
-        window.increment = increment; // Добавлено
+        window.getDoc = getDoc;
+        window.updateDoc = updateDoc;
+        window.increment = increment;
+        window.getDocs = getDocs; // Добавлено
+        window.serverTimestamp = serverTimestamp; // Добавлено
+        window.query = query; // Добавлено
+        window.orderBy = orderBy; // Добавлено
         window.auth = auth;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;
