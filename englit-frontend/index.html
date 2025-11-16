@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ENGLIT - Изучение английского</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Добавлена библиотека Chart.js для графиков -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Экран входа (без изменений) -->
@@ -40,19 +42,29 @@
                     </div>
                 </div>
 
+                <!-- БЛОК СТАТИСТИКИ -->
                 <div class="right-panel">
-                    <h3 class="statistics-title">Статистика</h3>
-                    <div class="statistics-content">
-                        <!-- Здесь будет отображаться статистика -->
-                        <p>Изучено: 0</p>
-                        <p>На изучении: 0</p>
-                        <p>Повторений сегодня: 0</p>
+                    <div class="statistics-header">
+                        <h3>Статистика</h3>
+                        <div class="total-learned-words">
+                            <p>Всего изучено слов</p>
+                            <span id="total-learned-count">0</span>
+                        </div>
+                    </div>
+                    <div class="statistics-filters">
+                        <button class="filter-btn active" data-period="all">Все</button>
+                        <button class="filter-btn" data-period="3m">3 месяца</button>
+                        <button class="filter-btn" data-period="1m">Месяц</button>
+                        <button class="filter-btn" data-period="1w">Неделя</button>
+                    </div>
+                    <div class="statistics-chart-container">
+                        <canvas id="statisticsChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- НОВЫЙ БЛОК: Модальное окно выбора категорий -->
+        <!-- Модальное окно выбора категорий -->
         <div id="categoryModal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
@@ -65,7 +77,7 @@
             </div>
         </div>
 
-        <!-- НОВАЯ СТРАНИЦА: Страница изучения слов -->
+        <!-- Страница изучения слов -->
         <div id="learning-page" class="learning-page-container" style="display: none;">
             <div class="learning-header">
                 <button id="backToMainBtn" class="back-button">&larr; Назад</button>
@@ -89,7 +101,7 @@
             </div>
         </div>
 
-        <!-- НОВАЯ СТРАНИЦА: Страница повторения слов (тестирование) -->
+        <!-- Страница повторения слов (тестирование) -->
         <div id="repeat-page" class="repeat-page-container" style="display: none;">
             <div class="repeat-header">
                 <button id="backToMainFromRepeatBtn" class="back-button">&larr; Назад</button>
@@ -128,7 +140,7 @@
             </div>
         </div>
 
-        <!-- НОВАЯ СТРАНИЦА: Страница словаря -->
+        <!-- Страница словаря -->
         <div id="dictionary-page" class="dictionary-page-container" style="display: none;">
             <div class="dictionary-header">
                 <button id="backToMainFromDictBtn" class="back-button">&larr; Назад</button>
@@ -151,7 +163,7 @@
             </div>
         </div>
         
-        <!-- НОВАЯ СТРАНИЦА: Страница "Свои слова" -->
+        <!-- Страница "Свои слова" -->
         <div id="my-words-page" class="my-words-page-container" style="display: none;">
             <div class="my-words-header">
                 <button id="backToMainFromMyWordsBtn" class="back-button">&larr; Назад</button>
@@ -175,7 +187,7 @@
             </div>
         </div>
         
-        <!-- НОВАЯ СТРАНИЦА: Страница Личного кабинета -->
+        <!-- Страница Личного кабинета -->
         <div id="profile-page" class="profile-page-container" style="display: none;">
             <div class="profile-header">
                 <button id="backToMainFromProfileBtn" class="back-button">&larr; Назад</button>
@@ -186,31 +198,17 @@
                     <div id="profile-avatar-display" class="profile-avatar-display"></div>
                 </div>
                 <div class="profile-details-section">
-                    <div class="profile-data-panel">
-                        <h3>Данные пользователя</h3>
-                        <p><strong>Имя:</strong> <span id="profile-displayName"></span></p>
-                        <p><strong>Email:</strong> <span id="profile-email"></span></p>
-                    </div>
-                    <div class="profile-settings-panel">
-                        <h3>Настройки ЛК</h3>
-                        <div class="setting-item">
-                            <label for="sound-toggle">Озвучка слов</label>
-                            <label class="switch">
-                                <input type="checkbox" id="sound-toggle">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    </div>
+                    <p id="profile-displayName" class="profile-name-display"></p>
+                    <p id="profile-email" class="profile-email-display"></p>
                     <div class="profile-actions">
-                        <button id="saveProfileSettingsBtn" class="profile-action-button save">Сохранить изменения</button>
-                        <button id="logoutBtn" class="profile-action-button logout">Выйти из аккаунта</button>
+                        <button id="logoutBtn" class="profile-action-button logout">Выйти</button>
+                        <button id="theme-toggle-btn" class="profile-action-button theme-toggle">Переключить тему</button>
                     </div>
                 </div>
             </div>
         </div>
 
-
-        <!-- Админ-панель и Словарь пока скрыты -->
+        <!-- Админ-панель (скрыта) -->
         <div id="admin-panel" style="display: none;">
             <h2>Панель Администратора</h2>
             <div class="admin-forms">
@@ -237,6 +235,7 @@
             <hr>
         </div>
 
+        <!-- Старый словарь (скрыт) -->
         <div class="dictionary-columns" style="display: none;">
             <h2>Словарь</h2>
             <div class="word-column">
@@ -254,7 +253,7 @@
         </div>
     </div>
 
-    <!-- Скрипт подключения Firebase (он уже правильный) -->
+    <!-- Скрипт подключения Firebase (без изменений) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, increment, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -282,10 +281,10 @@
         window.getDoc = getDoc;
         window.updateDoc = updateDoc;
         window.increment = increment;
-        window.getDocs = getDocs; // Добавлено
-        window.serverTimestamp = serverTimestamp; // Добавлено
-        window.query = query; // Добавлено
-        window.orderBy = orderBy; // Добавлено
+        window.getDocs = getDocs; 
+        window.serverTimestamp = serverTimestamp; 
+        window.query = query; 
+        window.orderBy = orderBy; 
         window.auth = auth;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;

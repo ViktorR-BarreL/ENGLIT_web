@@ -1,19 +1,35 @@
 /* Используем переменные для легкого управления цветами */
 :root {
+    /* Новые переменные для цветовой схемы */
+    --green-primary: #4CAF50;
+    --green-primary-hover: #388E3C;
+    --green-secondary: #F1F8E9;
+    --green-secondary-hover: #DCEDC8;
+
+    --purple-primary: #9C27B0;
+    --purple-primary-hover: #7B1FA2;
+    --purple-secondary: #3e2244; /* Темно-фиолетовый для фона кнопок */
+    --purple-secondary-hover: #532d5c;
+    
+    /* Цвета для графика */
+    --chart-color-learned: #388E3C;
+    --chart-color-learning: #A5D6A7;
+
+    /* Обновленные переменные для соответствия новой схеме */
     --background-color: #f8fafc;
     --text-color: #1f2937;
-    --accent-color: #10b981;
-    --accent-color-dark: #059669;
+    --accent-color: var(--green-primary);
+    --accent-color-dark: var(--green-primary-hover);
     --card-background: #ffffff;
     --subtle-text: #6b7280;
     --tag-background: #d1fae5;
     --tag-text: #065f46;
-    --main-layout-border-color: #e5e7eb; /* Новый цвет для границ */
-    --main-layout-bg: #ffffff; /* Фон для основного контента */
-    --button-primary-bg: #007bff; /* Синий для кнопок типа "выбрать категорию" */
-    --button-primary-hover-bg: #0056b3;
-    --button-secondary-bg: #e9ecef; /* Серый для больших кнопок */
-    --button-secondary-hover-bg: #dee2e6;
+    --main-layout-border-color: #e5e7eb;
+    --main-layout-bg: #ffffff;
+    --button-primary-bg: var(--green-primary);
+    --button-primary-hover-bg: var(--green-primary-hover);
+    --button-secondary-bg: var(--green-secondary);
+    --button-secondary-hover-bg: var(--green-secondary-hover);
     --input-border-color: #ccc;
     --input-bg-readonly: #eee;
     --logout-btn-bg: #dc3545;
@@ -34,14 +50,14 @@
     --learning-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --learning-text-color-primary: #1f2937;
     --learning-text-color-secondary: #6b7280;
-    --learning-button-know-bg: #28a745;
-    --learning-button-know-hover-bg: #218838;
-    --learning-button-learn-bg: #007bff;
+    --learning-button-know-bg: var(--green-primary);
+    --learning-button-know-hover-bg: var(--green-primary-hover);
+    --learning-button-learn-bg: #007bff; /* Оставляем синим для разнообразия */
     --learning-button-learn-hover-bg: #0056b3;
     --nav-arrow-bg: #e2e8f0;
     --nav-arrow-hover-bg: #cbd5e1;
     --progress-bar-bg: #e5e7eb;
-    --progress-bar-fill-color: #10b981;
+    --progress-bar-fill-color: var(--green-primary);
 
     /* Новые переменные для страницы повторения */
     --repeat-page-bg: #f8fafc;
@@ -49,8 +65,8 @@
     --repeat-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --repeat-text-color-primary: #1f2937;
     --repeat-text-color-secondary: #6b7280;
-    --repeat-button-primary-bg: #007bff;
-    --repeat-button-primary-hover-bg: #0056b3;
+    --repeat-button-primary-bg: var(--green-primary);
+    --repeat-button-primary-hover-bg: var(--green-primary-hover);
     --repeat-button-secondary-bg: #6c757d;
     --repeat-button-secondary-hover-bg: #5a6268;
     --option-button-bg: #e9ecef;
@@ -60,6 +76,77 @@
     --feedback-correct-color: #28a745;
     --feedback-incorrect-color: #dc3545;
 }
+
+/* --- Темная тема --- */
+body.dark-theme {
+    --background-color: #111827;
+    --text-color: #f9fafb;
+    --card-background: #1f2937;
+    --subtle-text: #9ca3af;
+    --main-layout-border-color: #374151;
+    --main-layout-bg: #111827;
+    --input-border-color: #4b5563;
+    --input-bg-readonly: #374151;
+    --modal-content-bg: #1f2937;
+    --modal-border-color: #4b5563;
+    --modal-close-color: #9ca3af;
+    --modal-close-hover-color: #f9fafb;
+    --category-card-border: #374151;
+    --category-card-hover-bg: #374151;
+
+    /* Переопределение цветов на фиолетовые */
+    --accent-color: var(--purple-primary);
+    --accent-color-dark: var(--purple-primary-hover);
+    --button-primary-bg: var(--purple-primary);
+    --button-primary-hover-bg: var(--purple-primary-hover);
+    --button-secondary-bg: var(--purple-secondary);
+    --button-secondary-hover-bg: var(--purple-secondary-hover);
+    --progress-bar-fill-color: var(--purple-primary);
+    
+    /* Цвета графика */
+    --chart-color-learned: #7B1FA2;
+    --chart-color-learning: #CE93D8;
+
+    /* Страница изучения */
+    --learning-page-bg: var(--background-color);
+    --learning-card-bg: var(--input-bg-readonly);
+    --learning-text-color-primary: var(--text-color);
+    --learning-text-color-secondary: var(--subtle-text);
+    --learning-button-know-bg: var(--purple-primary);
+    --learning-button-know-hover-bg: var(--purple-primary-hover);
+    --learning-button-learn-bg: #1b2741;
+    --learning-button-learn-hover-bg: #111827;
+    --nav-arrow-bg: #374151;
+    --nav-arrow-hover-bg: #4b5563;
+
+    /* Страница повторения */
+    --repeat-page-bg: var(--background-color);
+    --repeat-card-bg: var(--input-bg-readonly);
+    --repeat-text-color-primary: var(--text-color);
+    --repeat-button-primary-bg: var(--purple-primary);
+    --repeat-button-primary-hover-bg: var(--purple-primary-hover);
+    --option-button-bg: #4b5563;
+    --option-button-hover-bg: #5a6268;
+
+    /* Общие переопределения для темной темы */
+    --tag-background: var(--purple-secondary);
+    --tag-text: var(--purple-primary-hover);
+
+    .word-column { background-color: #1f2937; }
+    .back-button { background-color: #374151; border-color: #4b5563;}
+    .back-button:hover { background-color: #4b5563; }
+    .test-format-select,
+    .test-input-field {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: var(--text-color);
+    }
+    .admin-forms input, .admin-forms textarea, .admin-forms select {
+        background-color: #374151;
+        border-color: #4b5563;
+    }
+}
+
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -193,28 +280,6 @@ h1, h2, h3 {
     gap: 20px;
 }
 
-.right-panel {
-    flex: 1;
-    border: 1px solid var(--input-border-color);
-    border-radius: 5px;
-    padding: 15px;
-    background-color: var(--background-color);
-}
-
-.statistics-title {
-    margin-top: 0;
-    font-size: 18px;
-    color: var(--subtle-text);
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.statistics-content p {
-    margin: 5px 0;
-    font-size: 15px;
-    color: var(--subtle-text);
-}
-
 .category-selection {
     display: flex;
     gap: 10px;
@@ -257,7 +322,7 @@ h1, h2, h3 {
 
 .action-button {
     background-color: var(--button-secondary-bg);
-    border: 1px solid var(--input-border-color);
+    border: 1px solid var(--main-layout-border-color);
     border-radius: 8px;
     padding: 40px 20px;
     font-size: 22px;
@@ -271,10 +336,92 @@ h1, h2, h3 {
     align-items: center;
 }
 
+body.dark-theme .action-button {
+    border-color: #4b5563; /* Делаем рамку чуть заметнее на темном фоне */
+}
+
+
 .action-button:hover {
     background-color: var(--button-secondary-hover-bg);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
+
+/* --- СТИЛИ ДЛЯ БЛОКА СТАТИСТИКИ (ПРАВАЯ ПАНЕЛЬ) --- */
+.right-panel {
+    flex: 1;
+    background-color: var(--card-background);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border: 1px solid var(--main-layout-border-color);
+}
+
+.statistics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.statistics-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.total-learned-words {
+    text-align: right;
+}
+
+.total-learned-words p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--subtle-text);
+}
+
+#total-learned-count {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    line-height: 1;
+}
+
+.statistics-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    flex-grow: 1;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border: 1px solid var(--main-layout-border-color);
+    border-radius: 8px;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+body:not(.dark-theme) .filter-btn:hover {
+    background-color: #f1f5f9;
+}
+
+.filter-btn.active {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.statistics-chart-container {
+    flex-grow: 1;
+    min-height: 250px;
+    width: 100%;
+}
+
 
 /* СТИЛИ ДЛЯ АДМИН-ПАНЕЛИ */
 #admin-panel {

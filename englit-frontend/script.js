@@ -1,5 +1,4 @@
 // --- Получаем все инструменты из window (как было изначально) ---
-// Убедитесь, что эти переменные доступны глобально из index.html
 const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getDoc, updateDoc, increment, getDocs, serverTimestamp, query, orderBy } = window;
 
 
@@ -13,12 +12,12 @@ const loginBtn = document.getElementById('loginBtn');
 const adminPanel = document.getElementById('admin-panel');
 const addCategoryForm = document.getElementById('add-category-form');
 const addWordForm = document.getElementById('add-word-form');
-const categorySelect = document.getElementById('word-category-select'); // Для админ-панели
+const categorySelect = document.getElementById('word-category-select');
 const newWordsContainer = document.getElementById('new-words-container');
 const learningWordsContainer = document.getElementById('learning-words-container');
 const learnedWordsContainer = document.getElementById('learned-words-container');
 
-// Элементы главной страницы, добавленные ранее
+// Элементы главной страницы
 const userProfileCircle = document.getElementById('userProfileCircle');
 const selectedCategoryDisplay = document.getElementById('selectedCategoryDisplay');
 const selectCategoryBtn = document.getElementById('selectCategoryBtn');
@@ -26,14 +25,14 @@ const learnNewWordsBtn = document.getElementById('learnNewWordsBtn');
 const repeatWordsBtn = document.getElementById('repeatWordsBtn');
 const dictionaryBtn = document.getElementById('dictionaryBtn');
 const myWordsBtn = document.getElementById('myWordsBtn');
-const mainLayout = document.getElementById('mainLayout'); // Главный контей
+const mainLayout = document.getElementById('mainLayout');
 
-// Элементы модального окна категорий (из предыдущего обновления)
+// Элементы модального окна категорий
 const categoryModal = document.getElementById('categoryModal');
 const closeButton = categoryModal.querySelector('.close-button');
 const categoryGrid = document.getElementById('categoryGrid');
 
-// Элементы новой страницы изучения слов
+// Элементы страницы изучения слов
 const learningPage = document.getElementById('learning-page');
 const backToMainBtn = document.getElementById('backToMainBtn');
 const learningProgressBar = document.getElementById('learningProgressBar');
@@ -46,7 +45,7 @@ const nextWordBtn = document.getElementById('nextWordBtn');
 const knowWordBtn = document.getElementById('knowWordBtn');
 const learnItBtn = document.getElementById('learnItBtn');
 
-// Элементы новой страницы повторения слов (тестирование)
+// Элементы страницы повторения слов
 const repeatPage = document.getElementById('repeat-page');
 const backToMainFromRepeatBtn = document.getElementById('backToMainFromRepeatBtn');
 const testFormatSelect = document.getElementById('testFormatSelect');
@@ -63,7 +62,7 @@ const correctAnswersCount = document.getElementById('correctAnswersCount');
 const incorrectAnswersCount = document.getElementById('incorrectAnswersCount');
 const restartTestBtn = document.getElementById('restartTestBtn');
 
-// Элементы новой страницы словаря
+// Элементы страницы словаря
 const dictionaryPage = document.getElementById('dictionary-page');
 const backToMainFromDictBtn = document.getElementById('backToMainFromDictBtn');
 const dictionarySearchInput = document.getElementById('dictionarySearchInput');
@@ -71,33 +70,65 @@ const sourceWordsContainer = document.getElementById('source-words-container');
 const learnedWordsContainerDict = document.getElementById('learned-words-container-dict');
 const addedWordsContainerDict = document.getElementById('added-words-container-dict');
 
-// Элементы новой страницы "Свои слова"
+// Элементы страницы "Свои слова"
 const myWordsPage = document.getElementById('my-words-page');
 const backToMainFromMyWordsBtn = document.getElementById('backToMainFromMyWordsBtn');
 const addCustomWordForm = document.getElementById('add-custom-word-form');
 const customWordsList = document.getElementById('custom-words-list');
 
-// Элементы новой страницы Личного кабинета
+// Элементы страницы Личного кабинета
 const profilePage = document.getElementById('profile-page');
 const backToMainFromProfileBtn = document.getElementById('backToMainFromProfileBtn');
 const profileAvatarDisplay = document.getElementById('profile-avatar-display');
 const profileDisplayName = document.getElementById('profile-displayName');
 const profileEmail = document.getElementById('profile-email');
-const soundToggle = document.getElementById('sound-toggle');
-const saveProfileSettingsBtn = document.getElementById('saveProfileSettingsBtn');
-const logoutBtn = document.getElementById('logoutBtn'); // Теперь это кнопка в ЛК
+const logoutBtn = document.getElementById('logoutBtn');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
-let currentCategoryId = null; // Переменная для хранения ID выбранной категории
-let currentLearningWords = []; // Массив слов для изучения
-let currentWordIndex = 0; // Текущий индекс слова в массиве
+// Элементы статистики
+const totalLearnedCount = document.getElementById('total-learned-count');
+const statisticsFilters = document.querySelector('.statistics-filters');
+const ctx = document.getElementById('statisticsChart').getContext('2d');
+let statisticsChart = null; 
+let allUserWordsData = []; 
 
-let currentRepeatWords = []; // Массив слов для повторения
-let currentRepeatIndex = 0; // Текущий индекс слова в тесте
+// Глобальные переменные состояния
+let currentCategoryId = null; 
+let currentLearningWords = []; 
+let currentWordIndex = 0; 
+
+let currentRepeatWords = [];
+let currentRepeatIndex = 0; 
 let correctAnswers = 0;
 let incorrectAnswers = 0;
-let testActive = false; // Флаг активности теста
+let testActive = false; 
 
-let isSoundEnabled = true; // Глобальная переменная для настроек звука
+let isSoundEnabled = true;
+
+// --- Логика переключения тем ---
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    const isDark = document.body.classList.contains('dark-theme');
+    const newTheme = isDark ? 'light' : 'dark';
+    localStorage.setItem('theme', newTheme);
+    applyTheme(newTheme);
+    // Перерисовываем график, чтобы он подхватил новые цвета из CSS переменных
+    if (statisticsChart) {
+        loadAndRenderStatistics();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+});
 
 
 // --- Логика синтеза речи (TTS) ---
@@ -106,27 +137,18 @@ let britishVoice = null;
 function loadAndSetVoice() {
     const voices = window.speechSynthesis.getVoices();
     
-    // Ищем женский британский голос. "Kate" и "Libby" - частые имена в системах.
     britishVoice = voices.find(voice => 
         voice.lang === 'en-GB' && 
         (voice.name.includes('Female') || voice.name.includes('Kate') || voice.name.includes('Libby'))
     );
 
-    // Если не нашли женский, ищем любой британский голос
     if (!britishVoice) {
         britishVoice = voices.find(voice => voice.lang === 'en-GB');
     }
-
-    if (britishVoice) {
-        console.log('Выбран британский голос:', britishVoice.name);
-    } else {
-        console.warn('Британский голос не найден. Будет использован голос по умолчанию.');
-    }
 }
 
-// Функция для воспроизведения речи с учетом настроек
 function speakWord(word) {
-    if (!isSoundEnabled) return; // Проверяем, включен ли звук
+    if (!isSoundEnabled) return; 
     
     window.speechSynthesis.cancel(); 
     const utterance = new SpeechSynthesisUtterance(word);
@@ -137,7 +159,6 @@ function speakWord(word) {
     window.speechSynthesis.speak(utterance);
 }
 
-
 window.speechSynthesis.onvoiceschanged = loadAndSetVoice;
 loadAndSetVoice();
 
@@ -145,17 +166,14 @@ loadAndSetVoice();
 onAuthStateChanged(auth, user => {
     if (user) {
         loginScreen.style.display = 'none';
-        appContent.style.display = 'flex'; // Используем flex для главного layout
-        mainLayout.style.display = 'flex'; // Показываем основной макет
-        // Скрываем все страницы по умолчанию
+        appContent.style.display = 'flex';
+        mainLayout.style.display = 'flex';
         learningPage.style.display = 'none';
         repeatPage.style.display = 'none';
         dictionaryPage.style.display = 'none';
         myWordsPage.style.display = 'none';
         profilePage.style.display = 'none';
 
-        // Обновление кружка профиля
-        userProfileCircle.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : '?';
         if (user.photoURL) {
             userProfileCircle.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
         } else {
@@ -164,14 +182,15 @@ onAuthStateChanged(auth, user => {
 
         if (ADMIN_UIDS.includes(user.uid)) {
             adminPanel.style.display = 'block';
-            populateCategoryDropdown(); // Загрузка категорий для админ-формы
+            populateCategoryDropdown();
         } else {
             adminPanel.style.display = 'none';
         }
         
-        loadUserSettings(user); // Загружаем настройки пользователя
+        loadUserSettings(user);
         fetchWordsAndStatuses();
-        loadCategoriesForSelection(); // Загружаем категории для главного экрана при входе
+        loadCategoriesForSelection();
+        loadAndRenderStatistics();
     } else {
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
@@ -200,12 +219,12 @@ addCategoryForm.addEventListener('submit', async (e) => {
         await setDoc(doc(db, "category", categoryId), { 
             name: categoryName, 
             description: categoryDesc,
-            wordCount: 0 // Инициализируем количество слов
+            wordCount: 0 
         });
         alert('Категория добавлена!');
         addCategoryForm.reset();
-        populateCategoryDropdown(); // Обновить список категорий в форме добавления слова
-        loadCategoriesForSelection(); // Обновить категории в модальном окне
+        populateCategoryDropdown(); 
+        loadCategoriesForSelection(); 
     } catch (error) { console.error("Ошибка добавления категории:", error); }
 });
 
@@ -214,12 +233,8 @@ addWordForm.addEventListener('submit', async (e) => {
     const wordValue = addWordForm['word-en'].value.trim().toLowerCase();
     const categoryId = addWordForm['word-category-select'].value;
 
-    if (!wordValue) {
-        alert('Пожалуйста, введите английское слово.');
-        return;
-    }
-    if (!categoryId) {
-        alert('Пожалуйста, выберите категорию для слова.');
+    if (!wordValue || !categoryId) {
+        alert('Пожалуйста, выберите категорию.');
         return;
     }
 
@@ -241,14 +256,13 @@ addWordForm.addEventListener('submit', async (e) => {
             example: addWordForm['word-example'].value,
             category: {
                 id: categoryId,
-                name: categorySnap.data().name // Сохраняем имя категории
+                name: categorySnap.data().name 
             },
             createdAt: new Date()
         };
 
         await setDoc(wordDocRef, wordData);
 
-        // Увеличиваем счетчик слов в категории
         await updateDoc(categoryRef, {
             wordCount: increment(1)
         });
@@ -256,7 +270,7 @@ addWordForm.addEventListener('submit', async (e) => {
         alert('Слово добавлено!');
         addWordForm.reset();
         fetchWordsAndStatuses();
-        loadCategoriesForSelection(); // Обновить количество слов в категориях модального окна
+        loadCategoriesForSelection(); 
     } catch (error) { console.error("Ошибка добавления слова:", error); }
 });
 
@@ -275,28 +289,23 @@ async function populateCategoryDropdown() {
 }
 
 // --- Функции для работы с категориями (Модальное окно) ---
-
-// Открытие модального окна выбора категорий
 selectCategoryBtn.addEventListener('click', () => {
-    categoryModal.style.display = 'flex'; // Используем flex для центрирования
+    categoryModal.style.display = 'flex';
     loadCategoriesForSelection();
 });
 
-// Закрытие модального окна при клике на крестик
 closeButton.addEventListener('click', () => {
     categoryModal.style.display = 'none';
 });
 
-// Закрытие модального окна при клике вне его
 window.addEventListener('click', (event) => {
     if (event.target === categoryModal) {
         categoryModal.style.display = 'none';
     }
 });
 
-// Функция для получения и отображения категорий в модальном окне
 async function loadCategoriesForSelection() {
-    categoryGrid.innerHTML = ''; // Очищаем сетку перед загрузкой
+    categoryGrid.innerHTML = ''; 
     try {
         const response = await fetch('http://localhost:3000/categories');
         if (!response.ok) {
@@ -304,7 +313,6 @@ async function loadCategoriesForSelection() {
         }
         const categories = await response.json();
 
-        // Добавляем "Все категории" как первую опцию
         const allCategoriesCard = document.createElement('div');
         allCategoriesCard.classList.add('category-card');
         allCategoriesCard.innerHTML = `
@@ -315,12 +323,11 @@ async function loadCategoriesForSelection() {
         `;
         allCategoriesCard.addEventListener('click', () => {
             selectedCategoryDisplay.value = 'Все категории';
-            currentCategoryId = null; // Сбрасываем ID категории для отображения всех слов
+            currentCategoryId = null; 
             categoryModal.style.display = 'none';
-            fetchWordsAndStatuses(); // Обновляем список слов после выбора категории
+            fetchWordsAndStatuses(); 
         });
         categoryGrid.appendChild(allCategoriesCard);
-
 
         categories.forEach(category => {
             const categoryCard = document.createElement('div');
@@ -335,7 +342,7 @@ async function loadCategoriesForSelection() {
                 selectedCategoryDisplay.value = category.name;
                 currentCategoryId = category.id;
                 categoryModal.style.display = 'none';
-                fetchWordsAndStatuses(); // Обновляем список слов после выбора категории
+                fetchWordsAndStatuses(); 
             });
             categoryGrid.appendChild(categoryCard);
         });
@@ -351,13 +358,17 @@ async function updateWordStatus(wordId, newStatus) {
     const user = auth.currentUser;
     if (!user) return;
     try {
-        await setDoc(doc(db, "users", user.uid, "userWords", wordId), { status: newStatus }, { merge: true });
-        // Для страницы изучения, также обновим статус в текущем массиве слов
+        await setDoc(doc(db, "users", user.uid, "userWords", wordId), { 
+            status: newStatus,
+            statusChangedAt: serverTimestamp()
+        }, { merge: true });
+
         const wordToUpdate = currentLearningWords.find(word => word.id === wordId);
         if (wordToUpdate) {
             wordToUpdate.status = newStatus;
         }
-        fetchWordsAndStatuses(); // Обновим отображение на главной странице
+        fetchWordsAndStatuses(); 
+        loadAndRenderStatistics(true); // Передаем true, чтобы принудительно обновить данные
     } catch (error) { console.error("Ошибка обновления статуса:", error); }
 }
 
@@ -397,12 +408,10 @@ async function fetchWordsAndStatuses() {
             ? words.filter(word => word.categoryId === currentCategoryId)
             : words;
 
-        // Отфильтровываем слова, которые ещё не "изучаю" или "изучено"
         currentLearningWords = filteredWords.filter(word => 
             word.status !== 'изучаю' && word.status !== 'изучено'
         );
-        currentWordIndex = 0; // Сброс индекса при новой загрузке слов
-
+        currentWordIndex = 0; 
 
         if (filteredWords.length === 0) {
             newWordsContainer.innerHTML = '<p>Слов в выбранной категории пока нет.</p>';
@@ -429,7 +438,6 @@ async function fetchWordsAndStatuses() {
             `;
             
             card.querySelector('.play-btn').addEventListener('click', () => speakWord(data.word));
-            
             card.querySelector('.learn').addEventListener('click', () => updateWordStatus(data.id, 'изучаю'));
             card.querySelector('.learned').addEventListener('click', () => updateWordStatus(data.id, 'изучено'));
 
@@ -448,7 +456,6 @@ async function fetchWordsAndStatuses() {
 }
 
 // --- Логика страницы изучения слов ---
-
 function showLearningPage() {
     mainLayout.style.display = 'none';
     repeatPage.style.display = 'none';
@@ -462,7 +469,7 @@ function showLearningPage() {
 function hideLearningPage() {
     learningPage.style.display = 'none';
     mainLayout.style.display = 'flex';
-    fetchWordsAndStatuses(); // Обновим данные на главной странице после выхода со страницы изучения
+    fetchWordsAndStatuses();
 }
 
 function displayCurrentWord() {
@@ -475,7 +482,7 @@ function displayCurrentWord() {
         learnItBtn.style.display = 'none';
         prevWordBtn.style.display = 'none';
         nextWordBtn.style.display = 'none';
-        learningProgressBar.style.width = '100%'; // Прогресс 100% если нет слов
+        learningProgressBar.style.width = '100%'; 
         return;
     }
 
@@ -490,11 +497,9 @@ function displayCurrentWord() {
     transcriptionDisplay.textContent = word.transcription || '';
     exampleDisplay.textContent = word.example || '';
 
-    // Обновляем прогресс-бар
     const progress = ((currentWordIndex + 1) / currentLearningWords.length) * 100;
     learningProgressBar.style.width = `${progress}%`;
 
-    // Воспроизводим слово
     speakWord(word.word);
 }
 
@@ -511,12 +516,11 @@ function showNextWord() {
 function showPrevWord() {
     currentWordIndex--;
     if (currentWordIndex < 0) {
-        currentWordIndex = 0; // Или можно сделать alert('Это первое слово')
+        currentWordIndex = 0; 
     }
     displayCurrentWord();
 }
 
-// Обработчики событий для кнопок на странице изучения
 learnNewWordsBtn.addEventListener('click', showLearningPage);
 backToMainBtn.addEventListener('click', hideLearningPage);
 prevWordBtn.addEventListener('click', showPrevWord);
@@ -526,12 +530,11 @@ knowWordBtn.addEventListener('click', async () => {
     if (currentLearningWords.length > 0) {
         const word = currentLearningWords[currentWordIndex];
         await updateWordStatus(word.id, 'изучено');
-        // Удаляем слово из текущего списка, чтобы оно больше не появлялось в сессии
         currentLearningWords.splice(currentWordIndex, 1);
         if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
-            currentWordIndex = currentLearningWords.length - 1; // Переходим к последнему слову, если удалили текущее и оно было последним
+            currentWordIndex = currentLearningWords.length - 1; 
         }
-        displayCurrentWord(); // Показываем следующее или обновляем текущее
+        displayCurrentWord(); 
     }
 });
 
@@ -539,7 +542,6 @@ learnItBtn.addEventListener('click', async () => {
     if (currentLearningWords.length > 0) {
         const word = currentLearningWords[currentWordIndex];
         await updateWordStatus(word.id, 'изучаю');
-        // Удаляем слово из текущего списка
         currentLearningWords.splice(currentWordIndex, 1);
         if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
             currentWordIndex = currentLearningWords.length - 1;
@@ -550,7 +552,6 @@ learnItBtn.addEventListener('click', async () => {
 
 
 // --- Логика страницы повторения слов ---
-
 async function showRepeatPage() {
     mainLayout.style.display = 'none';
     learningPage.style.display = 'none'; 
@@ -559,7 +560,6 @@ async function showRepeatPage() {
     profilePage.style.display = 'none';
     repeatPage.style.display = 'flex';
     
-    // Сброс состояния теста
     testActive = false;
     currentRepeatIndex = 0;
     correctAnswers = 0;
@@ -574,21 +574,18 @@ async function showRepeatPage() {
     repeatWordDisplay.textContent = 'Слово';
     repeatProgressBar.style.width = '0%';
 
-    await loadWordsForRepeat(); // Загружаем слова для повторения
+    await loadWordsForRepeat(); 
 }
 
 function hideRepeatPage() {
     repeatPage.style.display = 'none';
     mainLayout.style.display = 'flex';
-    fetchWordsAndStatuses(); // Обновим данные на главной странице
+    fetchWordsAndStatuses(); 
 }
 
 async function loadWordsForRepeat() {
     const user = auth.currentUser;
-    if (!user) {
-        alert('Пожалуйста, войдите, чтобы повторять слова.');
-        return;
-    }
+    if (!user) return;
 
     try {
         const idToken = await user.getIdToken();
@@ -601,18 +598,16 @@ async function loadWordsForRepeat() {
         }
 
         const allWords = await wordsResponse.json();
-        // Фильтруем слова со статусом 'изучаю' или 'изучено'
         currentRepeatWords = allWords.filter(word => 
             word.status === 'изучаю' || word.status === 'изучено'
         );
         
         if (currentRepeatWords.length === 0) {
-            testOptionsContainer.innerHTML = '<p class="placeholder-text">У вас пока нет слов для повторения. Изучите новые слова!</p>';
+            testOptionsContainer.innerHTML = '<p class="placeholder-text">У вас пока нет слов для повторения!</p>';
             startTestBtn.style.display = 'none';
             repeatWordDisplay.textContent = '';
-            alert('У вас пока нет слов для повторения. Изучите новые слова!');
+            alert('У вас пока нет слов для повторения.');
         } else {
-            // Перемешиваем слова для случайного порядка
             currentRepeatWords.sort(() => Math.random() - 0.5);
             startTestBtn.style.display = 'inline-block';
             testOptionsContainer.innerHTML = '<p class="placeholder-text">Нажмите "Начать тест", чтобы начать.</p>';
@@ -620,23 +615,20 @@ async function loadWordsForRepeat() {
         }
     } catch (error) {
         console.error("Ошибка при загрузке слов для повторения:", error);
-        testOptionsContainer.innerHTML = '<p class="placeholder-text">Не удалось загрузить слова для повторения.</p>';
+        testOptionsContainer.innerHTML = '<p class="placeholder-text">Не удалось загрузить слова.</p>';
         startTestBtn.style.display = 'none';
     }
 }
 
 function startTest() {
-    if (currentRepeatWords.length === 0) {
-        alert('Нет слов для начала теста. Изучите новые слова!');
-        return;
-    }
+    if (currentRepeatWords.length === 0) return;
     testActive = true;
     currentRepeatIndex = 0;
     correctAnswers = 0;
     incorrectAnswers = 0;
     testResultsContainer.style.display = 'none';
     startTestBtn.style.display = 'none';
-    finishTestBtn.style.display = 'none'; // Скрываем кнопку "Завершить тест" в начале
+    finishTestBtn.style.display = 'none'; 
     displayQuestion();
 }
 
@@ -648,23 +640,14 @@ function displayQuestion() {
 
     const currentWord = currentRepeatWords[currentRepeatIndex];
     const testFormat = testFormatSelect.value;
-
-    feedbackMessage.textContent = ''; // Очищаем сообщение обратной связи
-    
-    // Обновляем прогресс-бар
+    feedbackMessage.textContent = ''; 
     const progress = ((currentRepeatIndex) / currentRepeatWords.length) * 100;
     repeatProgressBar.style.width = `${progress}%`;
 
     switch (testFormat) {
-        case 'view':
-            displayViewFormat(currentWord);
-            break;
-        case 'multiple-choice':
-            displayMultipleChoiceFormat(currentWord);
-            break;
-        case 'text-input':
-            displayTextInputFormat(currentWord);
-            break;
+        case 'view': displayViewFormat(currentWord); break;
+        case 'multiple-choice': displayMultipleChoiceFormat(currentWord); break;
+        case 'text-input': displayTextInputFormat(currentWord); break;
     }
 }
 
@@ -677,7 +660,6 @@ function displayViewFormat(word) {
         nextQuestionBtn.style.display = 'none';
         finishTestBtn.style.display = 'inline-block';
     }
-    // Воспроизводим слово
     speakWord(word.word);
 }
 
@@ -695,7 +677,6 @@ async function displayMultipleChoiceFormat(word) {
         button.addEventListener('click', () => selectOption(button, word.translation));
         testOptionsContainer.appendChild(button);
     });
-    // Воспроизводим слово
     speakWord(word.word);
 }
 
@@ -705,20 +686,16 @@ function displayTextInputFormat(word) {
     checkAnswerBtn.style.display = 'inline-block';
     nextQuestionBtn.style.display = 'none';
     document.getElementById('textAnswerInput').focus();
-    // Воспроизводим слово
     speakWord(word.word);
 }
 
 async function generateMultipleChoiceOptions(correctWord) {
-    const allWords = currentRepeatWords; // Используем все загруженные слова для ложных вариантов
+    const allWords = currentRepeatWords; 
     let options = [correctWord.translation];
-
-    // Собираем все переводы, исключая текущий
     const otherTranslations = allWords
         .map(w => w.translation)
         .filter(t => t !== correctWord.translation);
 
-    // Добавляем 3 случайных ложных варианта
     while (options.length < 4 && otherTranslations.length > 0) {
         const randomIndex = Math.floor(Math.random() * otherTranslations.length);
         const randomTranslation = otherTranslations.splice(randomIndex, 1)[0];
@@ -727,12 +704,10 @@ async function generateMultipleChoiceOptions(correctWord) {
         }
     }
     
-    // Если слов для ложных вариантов недостаточно, можно продублировать существующие или использовать заглушки
     while (options.length < 4) {
         options.push(`Placeholder Option ${options.length + 1}`);
     }
 
-    // Перемешиваем варианты
     options.sort(() => Math.random() - 0.5);
     return options;
 }
@@ -740,25 +715,19 @@ async function generateMultipleChoiceOptions(correctWord) {
 function selectOption(selectedButton, correctAnswer) {
     const isCorrect = selectedButton.textContent === correctAnswer;
     
-    // Отключаем все кнопки
     Array.from(testOptionsContainer.children).forEach(button => {
         button.disabled = true;
-        if (button.textContent === correctAnswer) {
-            button.classList.add('correct');
-        } else if (button === selectedButton) {
-            button.classList.add('incorrect');
-        }
+        if (button.textContent === correctAnswer) button.classList.add('correct');
+        else if (button === selectedButton) button.classList.add('incorrect');
     });
 
     if (isCorrect) {
         feedbackMessage.textContent = 'Правильно!';
-        feedbackMessage.classList.remove('incorrect');
-        feedbackMessage.classList.add('correct');
+        feedbackMessage.className = 'feedback-message correct';
         correctAnswers++;
     } else {
-        feedbackMessage.textContent = `Неправильно. Правильный ответ: ${correctAnswer}`;
-        feedbackMessage.classList.remove('correct');
-        feedbackMessage.classList.add('incorrect');
+        feedbackMessage.textContent = `Неправильно. Ответ: ${correctAnswer}`;
+        feedbackMessage.className = 'feedback-message incorrect';
         incorrectAnswers++;
     }
     
@@ -773,21 +742,18 @@ function selectOption(selectedButton, correctAnswer) {
 function checkTextInputAnswer() {
     const inputField = document.getElementById('textAnswerInput');
     if (!inputField) return;
-
     const userAnswer = inputField.value.trim().toLowerCase();
     const correctAnswer = currentRepeatWords[currentRepeatIndex].translation.toLowerCase();
 
-    inputField.disabled = true; // Отключаем поле ввода
+    inputField.disabled = true; 
     
     if (userAnswer === correctAnswer) {
         feedbackMessage.textContent = 'Правильно!';
-        feedbackMessage.classList.remove('incorrect');
-        feedbackMessage.classList.add('correct');
+        feedbackMessage.className = 'feedback-message correct';
         correctAnswers++;
     } else {
-        feedbackMessage.textContent = `Неправильно. Правильный ответ: ${currentRepeatWords[currentRepeatIndex].translation}`;
-        feedbackMessage.classList.remove('correct');
-        feedbackMessage.classList.add('incorrect');
+        feedbackMessage.textContent = `Неправильно. Ответ: ${currentRepeatWords[currentRepeatIndex].translation}`;
+        feedbackMessage.className = 'feedback-message incorrect';
         incorrectAnswers++;
     }
 
@@ -811,34 +777,26 @@ function endTest() {
     feedbackMessage.textContent = '';
     checkAnswerBtn.style.display = 'none';
     nextQuestionBtn.style.display = 'none';
-    finishTestBtn.style.display = 'none'; // Убедимся, что эта кнопка скрыта после завершения
+    finishTestBtn.style.display = 'none'; 
 
     correctAnswersCount.textContent = correctAnswers;
     incorrectAnswersCount.textContent = incorrectAnswers;
     testResultsContainer.style.display = 'block';
-
-    // Обновляем прогресс-бар до 100%
     repeatProgressBar.style.width = '100%';
 }
 
-
-// Обработчики событий для кнопок на странице повторения
 repeatWordsBtn.addEventListener('click', showRepeatPage);
 backToMainFromRepeatBtn.addEventListener('click', hideRepeatPage);
 startTestBtn.addEventListener('click', startTest);
 checkAnswerBtn.addEventListener('click', () => {
-    if (testFormatSelect.value === 'text-input') {
-        checkTextInputAnswer();
-    }
-    // Для multiple-choice проверка происходит при выборе опции
+    if (testFormatSelect.value === 'text-input') checkTextInputAnswer();
 });
 nextQuestionBtn.addEventListener('click', goToNextQuestion);
 finishTestBtn.addEventListener('click', endTest);
-restartTestBtn.addEventListener('click', startTest); // Начать тест заново из результатов
+restartTestBtn.addEventListener('click', startTest); 
 
 
 // --- Логика страницы словаря ---
-
 async function showDictionaryPage() {
     mainLayout.style.display = 'none';
     learningPage.style.display = 'none';
@@ -846,7 +804,7 @@ async function showDictionaryPage() {
     myWordsPage.style.display = 'none';
     profilePage.style.display = 'none';
     dictionaryPage.style.display = 'flex';
-    dictionarySearchInput.value = ''; // Сбрасываем поиск
+    dictionarySearchInput.value = ''; 
     await populateDictionary();
 }
 
@@ -864,7 +822,6 @@ async function populateDictionary() {
     if (!user) return;
 
     try {
-        // Загрузка всех слов и статусов
         const idToken = await user.getIdToken();
         const response = await fetch('http://localhost:3000/my-words', {
             headers: { 'Authorization': `Bearer ${idToken}` }
@@ -883,7 +840,6 @@ async function populateDictionary() {
             }
         });
 
-        // Загрузка слов, добавленных пользователем
         const customWordsCol = collection(db, "users", user.uid, "customWords");
         const customWordsSnapshot = await getDocs(query(customWordsCol, orderBy("createdAt", "desc")));
         
@@ -915,7 +871,7 @@ function createDictionaryWordCard(data) {
         </div>
     `;
     card.querySelector('.play-btn').addEventListener('click', (e) => {
-        e.stopPropagation(); // Предотвращаем другие клики
+        e.stopPropagation(); 
         speakWord(data.word);
     });
     return card;
@@ -935,14 +891,12 @@ function filterDictionary() {
     });
 }
 
-// Обработчики событий для словаря
 dictionaryBtn.addEventListener('click', showDictionaryPage);
 backToMainFromDictBtn.addEventListener('click', hideDictionaryPage);
 dictionarySearchInput.addEventListener('input', filterDictionary);
 
 
 // --- Логика страницы "Свои слова" ---
-
 function showMyWordsPage() {
     mainLayout.style.display = 'none';
     learningPage.style.display = 'none';
@@ -975,7 +929,7 @@ async function loadCustomWords() {
         } else {
             querySnapshot.forEach((doc) => {
                 const wordData = doc.data();
-                const card = createDictionaryWordCard(wordData); // Используем ту же функцию создания карточки
+                const card = createDictionaryWordCard(wordData); 
                 customWordsList.appendChild(card);
             });
         }
@@ -992,30 +946,27 @@ addCustomWordForm.addEventListener('submit', async (e) => {
     const user = auth.currentUser;
 
     if (!wordEn || !wordRu || !user) {
-        alert('Пожалуйста, заполните оба поля и убедитесь, что вы вошли в систему.');
+        alert('Пожалуйста, заполните оба поля.');
         return;
     }
 
     try {
-        // Добавляем новое слово в подколлекцию пользователя
         const customWordsCol = collection(db, "users", user.uid, "customWords");
         await addDoc(customWordsCol, {
             word: wordEn,
             translation: wordRu,
-            createdAt: serverTimestamp() // Используем серверное время для сортировки
+            createdAt: serverTimestamp()
         });
         
-        addCustomWordForm.reset(); // Очищаем форму
-        await loadCustomWords(); // Перезагружаем список слов
+        addCustomWordForm.reset(); 
+        await loadCustomWords(); 
 
     } catch (error) {
         console.error("Ошибка добавления своего слова:", error);
-        alert('Не удалось добавить слово. Попробуйте снова.');
+        alert('Не удалось добавить слово.');
     }
 });
 
-
-// Обработчики событий для "Свои слова"
 myWordsBtn.addEventListener('click', showMyWordsPage);
 backToMainFromMyWordsBtn.addEventListener('click', hideMyWordsPage);
 
@@ -1032,7 +983,6 @@ function showProfilePage() {
     myWordsPage.style.display = 'none';
     profilePage.style.display = 'flex';
 
-    // Заполняем данные
     profileDisplayName.textContent = user.displayName || 'Не указано';
     profileEmail.textContent = user.email;
     
@@ -1041,8 +991,6 @@ function showProfilePage() {
     } else {
         profileAvatarDisplay.innerHTML = `<span>${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</span>`;
     }
-    
-    soundToggle.checked = isSoundEnabled;
 }
 
 function hideProfilePage() {
@@ -1056,33 +1004,151 @@ async function loadUserSettings(user) {
     try {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists() && userDoc.data().settings) {
-            isSoundEnabled = userDoc.data().settings.soundEnabled;
+            isSoundEnabled = userDoc.data().settings.soundEnabled !== false;
         } else {
-            // Если настроек нет, устанавливаем по умолчанию и сохраняем
             isSoundEnabled = true;
             await setDoc(userDocRef, { settings: { soundEnabled: true } }, { merge: true });
         }
     } catch (error) {
         console.error("Ошибка загрузки настроек:", error);
-        isSoundEnabled = true; // Возвращаемся к значению по умолчанию при ошибке
-    }
-}
-
-async function saveUserSettings() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    isSoundEnabled = soundToggle.checked;
-    const userDocRef = doc(db, "users", user.uid);
-    try {
-        await setDoc(userDocRef, { settings: { soundEnabled: isSoundEnabled } }, { merge: true });
-        alert('Настройки сохранены!');
-    } catch (error) {
-        console.error("Ошибка сохранения настроек:", error);
-        alert('Не удалось сохранить настройки.');
+        isSoundEnabled = true;
     }
 }
 
 userProfileCircle.addEventListener('click', showProfilePage);
 backToMainFromProfileBtn.addEventListener('click', hideProfilePage);
-saveProfileSettingsBtn.addEventListener('click', saveUserSettings);
+
+
+// --- ИЗМЕНЕНА ЛОГИКА СТАТИСТИКИ ДЛЯ АВТООБНОВЛЕНИЯ ---
+async function loadAndRenderStatistics(forceRefetch = false) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const currentPeriod = document.querySelector('.statistics-filters .filter-btn.active').dataset.period;
+
+    try {
+        // Загружаем данные с сервера только при первом входе или принудительно (после изменения статуса слова)
+        if (allUserWordsData.length === 0 || forceRefetch) {
+            const userWordsRef = collection(db, "users", user.uid, "userWords");
+            const querySnapshot = await getDocs(userWordsRef);
+            
+            allUserWordsData = []; // Очищаем старый массив
+            querySnapshot.forEach(doc => {
+                allUserWordsData.push({ id: doc.id, ...doc.data() });
+            });
+        }
+
+        const totalLearned = allUserWordsData.filter(word => word.status === 'изучено').length;
+        totalLearnedCount.textContent = totalLearned;
+
+        // Перерисовываем график с текущим активным фильтром
+        renderChart(currentPeriod);
+
+    } catch (error) {
+        console.error("Ошибка загрузки данных для статистики:", error);
+    }
+}
+
+function renderChart(period) {
+    let startDate = new Date(0);
+    const now = new Date();
+
+    if (period === '1w') {
+        startDate = new Date(new Date().setDate(now.getDate() - 7));
+    } else if (period === '1m') {
+        startDate = new Date(new Date().setMonth(now.getMonth() - 1));
+    } else if (period === '3m') {
+        startDate = new Date(new Date().setMonth(now.getMonth() - 3));
+    }
+
+    const filteredWords = allUserWordsData.filter(word => {
+        return word.statusChangedAt && word.statusChangedAt.toDate() >= startDate;
+    });
+
+    const groupedData = filteredWords.reduce((acc, word) => {
+        const date = word.statusChangedAt.toDate();
+        const day = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear().toString().slice(-2)}`;
+        
+        if (!acc[day]) {
+            acc[day] = { learned: 0, learning: 0 };
+        }
+        if (word.status === 'изучено') {
+            acc[day].learned++;
+        } else if (word.status === 'изучаю') {
+            acc[day].learning++;
+        }
+        return acc;
+    }, {});
+
+    const sortedLabels = Object.keys(groupedData).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split('.').map(Number);
+        const [dayB, monthB, yearB] = b.split('.').map(Number);
+        const dateA = new Date(2000 + yearA, monthA - 1, dayA);
+        const dateB = new Date(2000 + yearB, monthB - 1, dayB);
+        return dateA - dateB;
+    });
+    
+    // Получаем цвета из CSS переменных для динамической смены темы
+    const style = getComputedStyle(document.body);
+    const learnedColor = style.getPropertyValue('--chart-color-learned').trim();
+    const learningColor = style.getPropertyValue('--chart-color-learning').trim();
+    const textColor = style.getPropertyValue('--text-color').trim();
+
+
+    const chartData = {
+        labels: sortedLabels.map(label => label.substring(0, 5)),
+        datasets: [
+            {
+                label: 'learned',
+                data: sortedLabels.map(label => groupedData[label].learned),
+                backgroundColor: learnedColor, 
+                borderRadius: 5,
+            },
+            {
+                label: 'learning',
+                data: sortedLabels.map(label => groupedData[label].learning),
+                backgroundColor: learningColor, 
+                borderRadius: 5,
+            }
+        ]
+    };
+    
+    if (statisticsChart) {
+        statisticsChart.destroy();
+    }
+
+    statisticsChart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { 
+                    stacked: true, 
+                    grid: { display: false },
+                    ticks: { color: textColor } // Цвет текста на оси X
+                },
+                y: { 
+                    stacked: true, 
+                    beginAtZero: true, 
+                    ticks: { 
+                        precision: 0,
+                        color: textColor // Цвет текста на оси Y
+                    } 
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+}
+
+statisticsFilters.addEventListener('click', (e) => {
+    if (e.target.classList.contains('filter-btn')) {
+        document.querySelectorAll('.statistics-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        const period = e.target.dataset.period;
+        // Просто перерисовываем график с новыми фильтрами, не загружая данные заново
+        renderChart(period);
+    }
+});
