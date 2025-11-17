@@ -356,12 +356,18 @@ body.dark-theme .action-button {
     flex-direction: column;
     gap: 20px;
     border: 1px solid var(--main-layout-border-color);
+    min-height: 400px;
+    max-height: 500px;
+    height: 450px;
+    overflow: hidden;
 }
 
 .statistics-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    flex-shrink: 0;
+    height: 60px;
 }
 
 .statistics-header h3 {
@@ -373,6 +379,7 @@ body.dark-theme .action-button {
 
 .total-learned-words {
     text-align: right;
+    flex-shrink: 0;
 }
 
 .total-learned-words p {
@@ -388,15 +395,19 @@ body.dark-theme .action-button {
     line-height: 1;
 }
 
+/* ФИКСИРОВАННЫЕ ФИЛЬТРЫ */
 .statistics-filters {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
+    height: 40px;
+    align-items: center;
 }
 
 .filter-btn {
-    flex-grow: 1;
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 0.8rem;
     border: 1px solid var(--main-layout-border-color);
     border-radius: 8px;
     background-color: var(--card-background);
@@ -404,7 +415,18 @@ body.dark-theme .action-button {
     cursor: pointer;
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
+
+/* Фиксированные ширины для кнопок */
+.filter-btn[data-period="all"] { flex: 0 0 50px; }
+.filter-btn[data-period="3m"] { flex: 0 0 70px; }
+.filter-btn[data-period="1m"] { flex: 0 0 60px; }
+.filter-btn[data-period="1w"] { flex: 0 0 60px; }
 
 body:not(.dark-theme) .filter-btn:hover {
     background-color: #f1f5f9;
@@ -416,56 +438,30 @@ body:not(.dark-theme) .filter-btn:hover {
     border-color: var(--accent-color);
 }
 
+/* ЖЕСТКО ФИКСИРОВАННЫЙ КОНТЕЙНЕР ГРАФИКА */
 .statistics-chart-container {
-    flex-grow: 1;
-    min-height: 250px;
     width: 100%;
-}
-
-
-/* СТИЛИ ДЛЯ АДМИН-ПАНЕЛИ */
-#admin-panel {
-    background-color: #fefce8;
-    border: 1px solid #fde047;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 30px;
-}
-.admin-forms {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 30px;
-}
-.admin-forms form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.admin-forms input, .admin-forms textarea, .admin-forms select {
-    width: 100%;
+    height: 280px !important;
+    min-height: 280px !important;
+    max-height: 280px !important;
+    border: 1px solid var(--main-layout-border-color);
+    border-radius: 8px;
     padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #d1d5db;
-    font-size: 1em;
+    background: var(--card-background);
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0 !important;
     box-sizing: border-box;
-    color: var(--text-color);
-    background-color: var(--card-background);
+    position: relative;
 }
-.admin-forms textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-.admin-forms button {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-}
-.admin-forms button:hover {
-    background-color: #218838;
+
+/* ФИКСИРОВАННЫЙ КАНВАС */
+#statisticsChart {
+    width: 100% !important;
+    height: 260px !important;
+    min-height: 260px !important;
+    max-height: 260px !important;
+    display: block;
 }
 
 /* СТИЛИ ДЛЯ КОЛОНОК СЛОВАРЯ */
@@ -549,44 +545,98 @@ body:not(.dark-theme) .filter-btn:hover {
     color: var(--tag-text);
 }
 
-/* СТИЛИ ДЛЯ КНОПОК СТАТУСА */
-.status-buttons {
-    margin-top: 0;
-    display: flex;
-    gap: 10px;
-}
-.status-btn {
-    font-size: 0.8em;
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid;
-    cursor: pointer;
-    background-color: transparent;
-    transition: all 0.2s ease-in-out;
-}
-.status-btn.learn {
-    border-color: #facc15;
-    color: #a16207;
-}
-.status-btn.learn:hover {
-    background-color: #fefce8;
-}
-.status-btn.learned {
-    border-color: var(--accent-color);
-    color: var(--tag-text);
-}
-.status-btn.learned:hover {
-    background-color: var(--tag-background);
-}
-
-/* Стили для блока actions, чтобы кнопки были рядом с кнопкой проигрывания */
-.word-card .actions {
+/* Разметка верхней строки слова (слово + иконка динамика) */
+.word-top-row,
+.repeat-word-row {
     display: flex;
     align-items: center;
-    gap: 15px;
-    flex-shrink: 0;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    width: 100%;
 }
 
+/* Ограничиваем ширину текста слова, чтобы иконка не съезжала */
+.word-top-row .word-text-large,
+.repeat-word-row .repeat-word-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 56px); /* резерв места для кнопки воспроизведения */
+}
+
+/* Уточнение стилей для play-btn в больших карточках (learning / repeat) */
+.word-card-learning .play-btn,
+.word-card-repeat .play-btn {
+    font-size: 1.05em;
+    padding: 6px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: background-color 0.12s ease, transform 0.08s ease;
+    box-shadow: none;
+}
+
+/* hover и active для play-btn внутри карточек */
+.word-card-learning .play-btn:hover,
+.word-card-repeat .play-btn:hover {
+    background-color: rgba(0,0,0,0.04);
+    transform: translateY(-2px);
+}
+
+/* Контейнер графика: горизонтальная прокрутка и "плавный" скролл на тачах */
+.statistics-chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    height: 320px;
+    display: block;
+    padding-bottom: 8px;
+}
+
+/* canvas внутри контейнера — блоковый элемент, CSS задаёт минимальную высоту.
+   Ширина задаётся JS, поэтому min-width достаточно для мобильных. */
+.statistics-chart-container canvas {
+    display: block;
+    height: 100% !important;
+    min-width: 600px;
+}
+
+/* Настройка вида скроллбара для контейнера */
+.statistics-chart-container::-webkit-scrollbar {
+    height: 10px;
+}
+.statistics-chart-container::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+}
+.statistics-chart-container::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+}
+
+/* Адаптив: на маленьких экранах уменьшаем размеры play-кнопки и высоту графика */
+@media (max-width: 768px) {
+    .word-card-learning .play-btn,
+    .word-card-repeat .play-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 1em;
+        padding: 4px;
+    }
+    .statistics-chart-container {
+        height: 260px;
+    }
+    .statistics-chart-container canvas {
+        min-width: 420px;
+    }
+}
+
+/* ...existing code... */
 
 /* --- НОВЫЕ СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА КАТЕГОРИЙ --- */
 .modal {
@@ -1562,3 +1612,4 @@ input:checked + .slider:before {
         justify-content: center;
     }
 }
+

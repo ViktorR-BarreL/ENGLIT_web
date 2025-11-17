@@ -88,7 +88,11 @@
             <div class="word-display-area">
                 <button id="prevWordBtn" class="nav-arrow">&lt;</button>
                 <div class="word-card-learning">
-                    <div id="wordDisplay" class="word-text-large"></div>
+                    <div class="word-top-row">
+                        <div id="wordDisplay" class="word-text-large"></div>
+                        <!-- Иконка динамика для TTS в карточке изучения (по нажатию) -->
+                        <button id="playCurrentWordBtn" class="play-btn" title="Прослушать слово">🔊</button>
+                    </div>
                     <div id="translationDisplay" class="word-translation"></div>
                     <div id="transcriptionDisplay" class="word-transcription"></div>
                     <div id="exampleDisplay" class="word-example"></div>
@@ -117,7 +121,11 @@
 
             <div class="repeat-content">
                 <div class="word-card-repeat">
-                    <div id="repeatWordDisplay" class="repeat-word-text">Слово</div>
+                    <div class="repeat-word-row">
+                        <div id="repeatWordDisplay" class="repeat-word-text">Слово</div>
+                        <!-- Иконка динамика для TTS в карточке повторения -->
+                        <button id="playRepeatWordBtn" class="play-btn" title="Прослушать слово">🔊</button>
+                    </div>
                     <div id="testOptionsContainer" class="test-options-container">
                         <!-- Здесь будут варианты тестирования или поле ввода -->
                         <p class="placeholder-text">Нажмите "Начать тест", чтобы начать.</p>

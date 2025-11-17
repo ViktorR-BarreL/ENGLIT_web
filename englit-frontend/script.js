@@ -1,21 +1,10 @@
-// --- Получаем все инструменты из window (как было изначально) ---
+// --- Получаем все инструменты из window ---
 const { db, collection, doc, addDoc, setDoc, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getDoc, updateDoc, increment, getDocs, serverTimestamp, query, orderBy } = window;
-
-
-// --- ВАЖНО: Вставьте сюда ваш UID Администратора ---
-const ADMIN_UIDS = ['tciaSYZZM0UMArvVbOoYvrjWqlB3'];
 
 // --- Находим все HTML-элементы на странице ---
 const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const loginBtn = document.getElementById('loginBtn');
-const adminPanel = document.getElementById('admin-panel');
-const addCategoryForm = document.getElementById('add-category-form');
-const addWordForm = document.getElementById('add-word-form');
-const categorySelect = document.getElementById('word-category-select');
-const newWordsContainer = document.getElementById('new-words-container');
-const learningWordsContainer = document.getElementById('learning-words-container');
-const learnedWordsContainer = document.getElementById('learned-words-container');
 
 // Элементы главной страницы
 const userProfileCircle = document.getElementById('userProfileCircle');
@@ -105,6 +94,10 @@ let testActive = false;
 
 let isSoundEnabled = true;
 
+// Новые элементы для TTS-иконок
+const playCurrentWordBtn = document.getElementById('playCurrentWordBtn');
+const playRepeatWordBtn = document.getElementById('playRepeatWordBtn');
+
 // --- Логика переключения тем ---
 function applyTheme(theme) {
     if (theme === 'dark') {
@@ -119,7 +112,6 @@ themeToggleBtn.addEventListener('click', () => {
     const newTheme = isDark ? 'light' : 'dark';
     localStorage.setItem('theme', newTheme);
     applyTheme(newTheme);
-    // Перерисовываем график, чтобы он подхватил новые цвета из CSS переменных
     if (statisticsChart) {
         loadAndRenderStatistics();
     }
@@ -129,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     applyTheme(savedTheme);
 });
-
 
 // --- Логика синтеза речи (TTS) ---
 let britishVoice = null;
@@ -180,13 +171,6 @@ onAuthStateChanged(auth, user => {
             userProfileCircle.innerHTML = `<span>${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</span>`;
         }
 
-        if (ADMIN_UIDS.includes(user.uid)) {
-            adminPanel.style.display = 'block';
-            populateCategoryDropdown();
-        } else {
-            adminPanel.style.display = 'none';
-        }
-        
         loadUserSettings(user);
         fetchWordsAndStatuses();
         loadCategoriesForSelection();
@@ -206,87 +190,6 @@ loginBtn.addEventListener('click', () => {
 logoutBtn.addEventListener('click', () => {
     signOut(auth).catch(error => console.error("Ошибка выхода:", error));
 });
-
-
-// --- Логика Админ-Панели ---
-addCategoryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const categoryId = addCategoryForm['category-id'].value.trim();
-    const categoryName = addCategoryForm['category-name'].value.trim();
-    const categoryDesc = addCategoryForm['category-desc'].value.trim();
-    if (!categoryId || !categoryName) return;
-    try {
-        await setDoc(doc(db, "category", categoryId), { 
-            name: categoryName, 
-            description: categoryDesc,
-            wordCount: 0 
-        });
-        alert('Категория добавлена!');
-        addCategoryForm.reset();
-        populateCategoryDropdown(); 
-        loadCategoriesForSelection(); 
-    } catch (error) { console.error("Ошибка добавления категории:", error); }
-});
-
-addWordForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const wordValue = addWordForm['word-en'].value.trim().toLowerCase();
-    const categoryId = addWordForm['word-category-select'].value;
-
-    if (!wordValue || !categoryId) {
-        alert('Пожалуйста, выберите категорию.');
-        return;
-    }
-
-    const wordDocRef = doc(db, "words", wordValue);
-    
-    try {
-        const categoryRef = doc(db, "category", categoryId);
-        const categorySnap = await getDoc(categoryRef);
-
-        if (!categorySnap.exists()) {
-            alert('Выбранная категория не существует.');
-            return;
-        }
-
-        const wordData = {
-            word: addWordForm['word-en'].value,
-            translation: addWordForm['word-ru'].value,
-            transcription: addWordForm['word-transcription'].value,
-            example: addWordForm['word-example'].value,
-            category: {
-                id: categoryId,
-                name: categorySnap.data().name 
-            },
-            createdAt: new Date()
-        };
-
-        await setDoc(wordDocRef, wordData);
-
-        await updateDoc(categoryRef, {
-            wordCount: increment(1)
-        });
-
-        alert('Слово добавлено!');
-        addWordForm.reset();
-        fetchWordsAndStatuses();
-        loadCategoriesForSelection(); 
-    } catch (error) { console.error("Ошибка добавления слова:", error); }
-});
-
-async function populateCategoryDropdown() {
-    try {
-        const response = await fetch('http://localhost:3000/categories');
-        const categories = await response.json();
-        categorySelect.innerHTML = '<option value="" disabled selected>Выберите категорию...</option>';
-        categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.name;
-            categorySelect.appendChild(option);
-        });
-    } catch (error) { console.error("Не удалось загрузить категории:", error); }
-}
 
 // --- Функции для работы с категориями (Модальное окно) ---
 selectCategoryBtn.addEventListener('click', () => {
@@ -313,12 +216,15 @@ async function loadCategoriesForSelection() {
         }
         const categories = await response.json();
 
+        // Карточка "Все категории"
         const allCategoriesCard = document.createElement('div');
         allCategoriesCard.classList.add('category-card');
+        // Подсчитываем общее количество слов во всех категориях
+        const totalWordsCount = categories.reduce((total, category) => total + (category.wordCount || 0), 0);
         allCategoriesCard.innerHTML = `
             <div class="category-info">
                 <p class="category-name">Все категории</p>
-                <p class="category-word-count">Все слова</p>
+                <p class="category-word-count">Слов в словаре: ${totalWordsCount}</p>
             </div>
         `;
         allCategoriesCard.addEventListener('click', () => {
@@ -329,13 +235,52 @@ async function loadCategoriesForSelection() {
         });
         categoryGrid.appendChild(allCategoriesCard);
 
+        // Карточка пользовательских слов
+        const customWordsCard = document.createElement('div');
+        customWordsCard.classList.add('category-card');
+        customWordsCard.innerHTML = `
+            <div class="category-info">
+                <p class="category-name">Мои слова</p>
+                <p class="category-word-count">Загрузка...</p>
+            </div>
+        `;
+        customWordsCard.addEventListener('click', () => {
+            selectedCategoryDisplay.value = 'Мои слова';
+            currentCategoryId = 'custom';
+            categoryModal.style.display = 'none';
+            fetchWordsAndStatuses();
+        });
+        categoryGrid.appendChild(customWordsCard);
+
+        // Загружаем количество пользовательских слов
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                const idToken = await user.getIdToken();
+                const response = await fetch('http://localhost:3000/custom-words-count', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    customWordsCard.querySelector('.category-word-count').textContent = 
+                        `Слов в словаре: ${data.count}`;
+                } else {
+                    customWordsCard.querySelector('.category-word-count').textContent = 'Слов в словаре: 0';
+                }
+            }
+        } catch (error) {
+            console.error("Error loading custom words count:", error);
+            customWordsCard.querySelector('.category-word-count').textContent = 'Слов в словаре: 0';
+        }
+
+        // Карточки обычных категорий
         categories.forEach(category => {
             const categoryCard = document.createElement('div');
             categoryCard.classList.add('category-card');
             categoryCard.innerHTML = `
                 <div class="category-info">
                     <p class="category-name">${category.name}</p>
-                    <p class="category-word-count">Количество слов: ${category.wordCount || 0}</p>
+                    <p class="category-word-count">Слов в словаре: ${category.wordCount || 0}</p>
                 </div>
             `;
             categoryCard.addEventListener('click', () => {
@@ -352,30 +297,32 @@ async function loadCategoriesForSelection() {
     }
 }
 
-
 // --- Основная Логика Приложения (для главной страницы) ---
 async function updateWordStatus(wordId, newStatus) {
     const user = auth.currentUser;
     if (!user) return;
     try {
-        await setDoc(doc(db, "users", user.uid, "userWords", wordId), { 
-            status: newStatus,
-            statusChangedAt: serverTimestamp()
-        }, { merge: true });
-
-        const wordToUpdate = currentLearningWords.find(word => word.id === wordId);
-        if (wordToUpdate) {
-            wordToUpdate.status = newStatus;
+        const idToken = await user.getIdToken();
+        const resp = await fetch('http://localhost:3000/update-word-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ wordId, status: newStatus })
+        });
+        if (!resp.ok) {
+            throw new Error('Ошибка при обновлении статуса на сервере');
         }
-        fetchWordsAndStatuses(); 
-        loadAndRenderStatistics(true); // Передаем true, чтобы принудительно обновить данные
-    } catch (error) { console.error("Ошибка обновления статуса:", error); }
+        // Обновляем локальные представления
+        await fetchWordsAndStatuses();
+        await loadAndRenderStatistics(true);
+    } catch (error) {
+        console.error("Ошибка обновления статуса:", error);
+    }
 }
 
 async function fetchWordsAndStatuses() {
-    newWordsContainer.innerHTML = '<p>Загрузка...</p>';
-    learningWordsContainer.innerHTML = '';
-    learnedWordsContainer.innerHTML = '';
     const user = auth.currentUser;
     if (!user) return;
 
@@ -400,58 +347,26 @@ async function fetchWordsAndStatuses() {
             categoriesMap[cat.id] = cat.name;
         });
 
-        newWordsContainer.innerHTML = '';
-        learningWordsContainer.innerHTML = '';
-        learnedWordsContainer.innerHTML = '';
-
         const filteredWords = currentCategoryId
             ? words.filter(word => word.categoryId === currentCategoryId)
             : words;
 
+        // Используем английские статусы для синхронизации
         currentLearningWords = filteredWords.filter(word => 
-            word.status !== 'изучаю' && word.status !== 'изучено'
+            word.status !== 'learning' && word.status !== 'learned'
         );
         currentWordIndex = 0; 
 
         if (filteredWords.length === 0) {
-            newWordsContainer.innerHTML = '<p>Слов в выбранной категории пока нет.</p>';
             return;
         }
 
-        filteredWords.forEach(data => {
-            const card = document.createElement('div');
-            card.className = 'word-card';
-            card.id = 'word-' + data.id;
-            const categoryName = categoriesMap[data.categoryId] || 'Без категории';
-            card.innerHTML = `
-                <div class="info">
-                    <p><strong>${data.word}</strong> - ${data.translation} <span class="category-tag">${categoryName}</span></p>
-                    <span class="details">${data.transcription || ''} — ${data.example || ''}</span>
-                </div>
-                <div class="actions">
-                    <button class="play-btn">&#9658;</button>
-                    <div class="status-buttons">
-                        <button class="status-btn learn">Изучаю</button>
-                        <button class="status-btn learned">Изучено</button>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.play-btn').addEventListener('click', () => speakWord(data.word));
-            card.querySelector('.learn').addEventListener('click', () => updateWordStatus(data.id, 'изучаю'));
-            card.querySelector('.learned').addEventListener('click', () => updateWordStatus(data.id, 'изучено'));
+        // Обновляем статистику
+        const learnedCount = filteredWords.filter(word => word.status === 'learned').length;
+        totalLearnedCount.textContent = learnedCount;
 
-            if (data.status === 'изучаю') {
-                learningWordsContainer.appendChild(card);
-            } else if (data.status === 'изучено') {
-                learnedWordsContainer.appendChild(card);
-            } else {
-                newWordsContainer.appendChild(card);
-            }
-        });
     } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
-        newWordsContainer.innerHTML = '<p>Не удалось загрузить слова.</p>';
     }
 }
 
@@ -500,7 +415,33 @@ function displayCurrentWord() {
     const progress = ((currentWordIndex + 1) / currentLearningWords.length) * 100;
     learningProgressBar.style.width = `${progress}%`;
 
-    speakWord(word.word);
+    // Авто-озвучка отключена для страницы изучения — TTS по кнопке только.
+}
+
+// play current word (learning page)
+if (playCurrentWordBtn) {
+    playCurrentWordBtn.addEventListener('click', () => {
+        if (currentLearningWords.length === 0) {
+            // если нет текущего слова, пробуем прочитать текст в элементе
+            const text = wordDisplay.textContent.trim();
+            if (text) speakWord(text);
+            return;
+        }
+        const word = currentLearningWords[currentWordIndex];
+        if (word && word.word) speakWord(word.word);
+    });
+}
+
+// play current word (repeat page)
+if (playRepeatWordBtn) {
+    playRepeatWordBtn.addEventListener('click', () => {
+        if (testActive && currentRepeatWords[currentRepeatIndex]) {
+            speakWord(currentRepeatWords[currentRepeatIndex].word);
+        } else {
+            const txt = repeatWordDisplay.textContent.trim();
+            if (txt) speakWord(txt);
+        }
+    });
 }
 
 function showNextWord() {
@@ -529,7 +470,7 @@ nextWordBtn.addEventListener('click', showNextWord);
 knowWordBtn.addEventListener('click', async () => {
     if (currentLearningWords.length > 0) {
         const word = currentLearningWords[currentWordIndex];
-        await updateWordStatus(word.id, 'изучено');
+        await updateWordStatus(word.id, 'learned');
         currentLearningWords.splice(currentWordIndex, 1);
         if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
             currentWordIndex = currentLearningWords.length - 1; 
@@ -541,7 +482,7 @@ knowWordBtn.addEventListener('click', async () => {
 learnItBtn.addEventListener('click', async () => {
     if (currentLearningWords.length > 0) {
         const word = currentLearningWords[currentWordIndex];
-        await updateWordStatus(word.id, 'изучаю');
+        await updateWordStatus(word.id, 'learning');
         currentLearningWords.splice(currentWordIndex, 1);
         if (currentWordIndex >= currentLearningWords.length && currentLearningWords.length > 0) {
             currentWordIndex = currentLearningWords.length - 1;
@@ -549,7 +490,6 @@ learnItBtn.addEventListener('click', async () => {
         displayCurrentWord();
     }
 });
-
 
 // --- Логика страницы повторения слов ---
 async function showRepeatPage() {
@@ -598,8 +538,9 @@ async function loadWordsForRepeat() {
         }
 
         const allWords = await wordsResponse.json();
+        // Используем английские статусы
         currentRepeatWords = allWords.filter(word => 
-            word.status === 'изучаю' || word.status === 'изучено'
+            word.status === 'learning' || word.status === 'learned'
         );
         
         if (currentRepeatWords.length === 0) {
@@ -795,7 +736,6 @@ nextQuestionBtn.addEventListener('click', goToNextQuestion);
 finishTestBtn.addEventListener('click', endTest);
 restartTestBtn.addEventListener('click', startTest); 
 
-
 // --- Логика страницы словаря ---
 async function showDictionaryPage() {
     mainLayout.style.display = 'none';
@@ -835,7 +775,7 @@ async function populateDictionary() {
         
         allWords.forEach(wordData => {
             sourceWordsContainer.appendChild(createDictionaryWordCard(wordData));
-            if (wordData.status === 'изучено') {
+            if (wordData.status === 'learned') {
                 learnedWordsContainerDict.appendChild(createDictionaryWordCard(wordData));
             }
         });
@@ -895,7 +835,6 @@ dictionaryBtn.addEventListener('click', showDictionaryPage);
 backToMainFromDictBtn.addEventListener('click', hideDictionaryPage);
 dictionarySearchInput.addEventListener('input', filterDictionary);
 
-
 // --- Логика страницы "Свои слова" ---
 function showMyWordsPage() {
     mainLayout.style.display = 'none';
@@ -951,15 +890,26 @@ addCustomWordForm.addEventListener('submit', async (e) => {
     }
 
     try {
-        const customWordsCol = collection(db, "users", user.uid, "customWords");
-        await addDoc(customWordsCol, {
-            word: wordEn,
-            translation: wordRu,
-            createdAt: serverTimestamp()
+        const idToken = await user.getIdToken();
+        const response = await fetch('http://localhost:3000/add-custom-word', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                word: wordEn,
+                translation: wordRu
+            })
         });
-        
-        addCustomWordForm.reset(); 
-        await loadCustomWords(); 
+
+        if (response.ok) {
+            addCustomWordForm.reset(); 
+            await loadCustomWords(); 
+            alert('Слово успешно добавлено!');
+        } else {
+            throw new Error('Ошибка сервера');
+        }
 
     } catch (error) {
         console.error("Ошибка добавления своего слова:", error);
@@ -969,7 +919,6 @@ addCustomWordForm.addEventListener('submit', async (e) => {
 
 myWordsBtn.addEventListener('click', showMyWordsPage);
 backToMainFromMyWordsBtn.addEventListener('click', hideMyWordsPage);
-
 
 // --- Логика страницы Личного кабинета ---
 function showProfilePage() {
@@ -1007,7 +956,14 @@ async function loadUserSettings(user) {
             isSoundEnabled = userDoc.data().settings.soundEnabled !== false;
         } else {
             isSoundEnabled = true;
-            await setDoc(userDocRef, { settings: { soundEnabled: true } }, { merge: true });
+            await setDoc(userDocRef, { 
+                settings: { soundEnabled: true },
+                stats: {
+                    totalLearnedWords: 0,
+                    repetitionsCount: 0,
+                    progressByTheme: {}
+                }
+            }, { merge: true });
         }
     } catch (error) {
         console.error("Ошибка загрузки настроек:", error);
@@ -1018,137 +974,171 @@ async function loadUserSettings(user) {
 userProfileCircle.addEventListener('click', showProfilePage);
 backToMainFromProfileBtn.addEventListener('click', hideProfilePage);
 
-
-// --- ИЗМЕНЕНА ЛОГИКА СТАТИСТИКИ ДЛЯ АВТООБНОВЛЕНИЯ ---
+// --- Логика статистики ---
 async function loadAndRenderStatistics(forceRefetch = false) {
     const user = auth.currentUser;
     if (!user) return;
 
-    const currentPeriod = document.querySelector('.statistics-filters .filter-btn.active').dataset.period;
+    const currentPeriod = document.querySelector('.statistics-filters .filter-btn.active')?.dataset.period || 'all';
 
     try {
-        // Загружаем данные с сервера только при первом входе или принудительно (после изменения статуса слова)
-        if (allUserWordsData.length === 0 || forceRefetch) {
-            const userWordsRef = collection(db, "users", user.uid, "userWords");
-            const querySnapshot = await getDocs(userWordsRef);
-            
-            allUserWordsData = []; // Очищаем старый массив
-            querySnapshot.forEach(doc => {
-                allUserWordsData.push({ id: doc.id, ...doc.data() });
-            });
+        const idToken = await user.getIdToken();
+
+        // Получаем агрегированные данные для графика
+        const aggResp = await fetch(`http://localhost:3000/stats-aggregation?period=${encodeURIComponent(currentPeriod)}`, {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (!aggResp.ok) throw new Error('Ошибка получения агрегированных данных');
+        const agg = await aggResp.json();
+
+        // Получаем общее число изученных из user-stats
+        const statsResp = await fetch('http://localhost:3000/user-stats', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        let userStats = null;
+        if (statsResp.ok) {
+            userStats = await statsResp.json();
+            totalLearnedCount.textContent = (userStats.totalLearnedWords || 0);
+        } else {
+            // fallback: посчитать по агрегированным данным
+            const totalLearned = (agg.learned || []).reduce((s, v) => s + v, 0);
+            totalLearnedCount.textContent = totalLearned;
         }
 
-        const totalLearned = allUserWordsData.filter(word => word.status === 'изучено').length;
-        totalLearnedCount.textContent = totalLearned;
-
-        // Перерисовываем график с текущим активным фильтром
-        renderChart(currentPeriod);
+        // Рендерим график из аггрегированных данных (labels, learning, learned)
+        renderAggregatedChart(agg.labels || [], agg.learning || [], agg.learned || []);
 
     } catch (error) {
         console.error("Ошибка загрузки данных для статистики:", error);
     }
 }
 
-function renderChart(period) {
-    let startDate = new Date(0);
-    const now = new Date();
-
-    if (period === '1w') {
-        startDate = new Date(new Date().setDate(now.getDate() - 7));
-    } else if (period === '1m') {
-        startDate = new Date(new Date().setMonth(now.getMonth() - 1));
-    } else if (period === '3m') {
-        startDate = new Date(new Date().setMonth(now.getMonth() - 3));
-    }
-
-    const filteredWords = allUserWordsData.filter(word => {
-        return word.statusChangedAt && word.statusChangedAt.toDate() >= startDate;
-    });
-
-    const groupedData = filteredWords.reduce((acc, word) => {
-        const date = word.statusChangedAt.toDate();
-        const day = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear().toString().slice(-2)}`;
-        
-        if (!acc[day]) {
-            acc[day] = { learned: 0, learning: 0 };
-        }
-        if (word.status === 'изучено') {
-            acc[day].learned++;
-        } else if (word.status === 'изучаю') {
-            acc[day].learning++;
-        }
-        return acc;
-    }, {});
-
-    const sortedLabels = Object.keys(groupedData).sort((a, b) => {
-        const [dayA, monthA, yearA] = a.split('.').map(Number);
-        const [dayB, monthB, yearB] = b.split('.').map(Number);
-        const dateA = new Date(2000 + yearA, monthA - 1, dayA);
-        const dateB = new Date(2000 + yearB, monthB - 1, dayB);
-        return dateA - dateB;
-    });
-    
-    // Получаем цвета из CSS переменных для динамической смены темы
+// Новый рендерер, принимает готовые массивы
+function renderAggregatedChart(labels, learningData, learnedData, period) {
+    // подготовка цветов из CSS
     const style = getComputedStyle(document.body);
-    const learnedColor = style.getPropertyValue('--chart-color-learned').trim();
-    const learningColor = style.getPropertyValue('--chart-color-learning').trim();
-    const textColor = style.getPropertyValue('--text-color').trim();
+    const learnedColor = (style.getPropertyValue('--chart-color-learned') || '#2e7d32').trim();
+    const learningColor = (style.getPropertyValue('--chart-color-learning') || '#a5d6a7').trim();
+    const textColor = (style.getPropertyValue('--text-color') || '#222').trim();
 
-
-    const chartData = {
-        labels: sortedLabels.map(label => label.substring(0, 5)),
-        datasets: [
-            {
-                label: 'learned',
-                data: sortedLabels.map(label => groupedData[label].learned),
-                backgroundColor: learnedColor, 
-                borderRadius: 5,
-            },
-            {
-                label: 'learning',
-                data: sortedLabels.map(label => groupedData[label].learning),
-                backgroundColor: learningColor, 
-                borderRadius: 5,
-            }
-        ]
-    };
-    
-    if (statisticsChart) {
-        statisticsChart.destroy();
+    // ЖЕСТКО ФИКСИРУЕМ РАЗМЕР КОНТЕЙНЕРА
+    const chartContainer = document.querySelector('.statistics-chart-container');
+    if (chartContainer) {
+        chartContainer.style.width = '100%';
+        chartContainer.style.height = '320px';
+        chartContainer.style.minHeight = '320px';
+        chartContainer.style.maxHeight = '320px';
+        chartContainer.style.overflowX = 'auto';
+        chartContainer.style.overflowY = 'hidden';
+        chartContainer.style.flexShrink = '0';
+        chartContainer.style.flexGrow = '0';
     }
 
-    statisticsChart = new Chart(ctx, {
+    if (statisticsChart) {
+        try { statisticsChart.destroy(); } catch (e) {}
+        statisticsChart = null;
+    }
+
+    const canvas = document.getElementById('statisticsChart');
+    const minBarWidth = 56;
+    const desiredWidth = Math.max(labels.length * minBarWidth, 600);
+    
+    // ЖЕСТКО ФИКСИРУЕМ РАЗМЕР КАНВАСА
+    canvas.style.width = desiredWidth + 'px';
+    canvas.style.height = '300px';
+    canvas.style.minHeight = '300px';
+    canvas.style.maxHeight = '300px';
+    
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(desiredWidth * dpr);
+    canvas.height = Math.round(300 * dpr);
+
+    const ctx2 = canvas.getContext('2d');
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    statisticsChart = new Chart(ctx2, {
         type: 'bar',
-        data: chartData,
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { 
-                    stacked: true, 
-                    grid: { display: false },
-                    ticks: { color: textColor } // Цвет текста на оси X
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Изучается',
+                    data: learningData,
+                    backgroundColor: learningColor,
+                    stack: 'stack1',
+                    barThickness: Math.round(minBarWidth * 0.72),
+                    borderRadius: 6
                 },
-                y: { 
-                    stacked: true, 
-                    beginAtZero: true, 
-                    ticks: { 
-                        precision: 0,
-                        color: textColor // Цвет текста на оси Y
-                    } 
+                {
+                    label: 'Изучено',
+                    data: learnedData,
+                    backgroundColor: learnedColor,
+                    stack: 'stack1',
+                    barThickness: Math.round(minBarWidth * 0.72),
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    display: true, 
+                    labels: { color: textColor },
+                    position: 'top'
+                },
+                tooltip: { 
+                    mode: 'index', 
+                    intersect: false
                 }
             },
-            responsive: true,
-            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { 
+                        display: false 
+                    },
+                    ticks: { 
+                        color: textColor, 
+                        autoSkip: false, 
+                        maxRotation: 45
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { 
+                        color: textColor, 
+                        precision: 0 
+                    }
+                }
+            },
+            interaction: { 
+                mode: 'nearest', 
+                axis: 'x', 
+                intersect: false 
+            },
+            animation: { 
+                duration: 250 
+            }
         }
     });
 }
 
-statisticsFilters.addEventListener('click', (e) => {
-    if (e.target.classList.contains('filter-btn')) {
-        document.querySelectorAll('.statistics-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        const period = e.target.dataset.period;
-        // Просто перерисовываем график с новыми фильтрами, не загружая данные заново
-        renderChart(period);
+document.addEventListener('DOMContentLoaded', function() {
+    const defaultFilter = document.querySelector('.filter-btn[data-period="all"]');
+    if (defaultFilter) {
+        defaultFilter.classList.add('active');
     }
+    
+    statisticsFilters.addEventListener('click', (e) => {
+        if (e.target.classList.contains('filter-btn')) {
+            document.querySelectorAll('.statistics-filters .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            loadAndRenderStatistics(true);
+        }
+    });
 });
